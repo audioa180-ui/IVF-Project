@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ivf_patient_app/theme/app_theme.dart';
 import 'package:ivf_patient_app/services/api_service.dart';
 import 'package:provider/provider.dart';
-import 'package:ivf_patient_app/providers/user_provider.dart';
 
 class TreatmentJourneyScreen extends StatefulWidget {
   const TreatmentJourneyScreen({super.key});
