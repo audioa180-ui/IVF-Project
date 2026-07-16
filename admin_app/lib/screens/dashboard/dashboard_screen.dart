@@ -86,7 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Header
                   Row(
                     children: [
-                      Icon(Icons.dashboard, color: AdminTheme.lavenderPrimary),
+                      Icon(Icons.dashboard, color: AdminTheme.navyPrimary),
                       const SizedBox(width: 12),
                       Text(
                         'Dashboard',
@@ -110,7 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         'Total Users',
                         stats['totalUsers'].toString(),
                         Icons.people_outline,
-                        AdminTheme.lavenderPrimary,
+                        AdminTheme.navyPrimary,
                       ).animate().fadeIn(delay: 100.ms).scale(),
                       _buildStatCard(
                         'Total Doctors',
@@ -151,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: AdminTheme.lavenderPale.withValues(alpha: 0.5),
+                        color: AdminTheme.navyPale.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
@@ -220,7 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildSectionHeader(String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: AdminTheme.lavenderPrimary),
+        Icon(icon, color: AdminTheme.navyPrimary),
         const SizedBox(width: 8),
         Text(
           title,
@@ -234,11 +234,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AdminTheme.lavenderPale,
+          backgroundColor: AdminTheme.navyPale,
           child: Text(
             user['name'][0].toString().toUpperCase(),
             style: TextStyle(
-              color: AdminTheme.lavenderDark,
+              color: AdminTheme.navyDark,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -275,10 +275,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AdminTheme.lavenderPale,
+            color: AdminTheme.navyPale,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.calendar_today, color: AdminTheme.lavenderDark, size: 20),
+          child: Icon(Icons.calendar_today, color: AdminTheme.navyDark, size: 20),
         ),
         title: Text(appointment['doctorName']),
         subtitle: Text('$formattedDate at ${appointment['time']}'),

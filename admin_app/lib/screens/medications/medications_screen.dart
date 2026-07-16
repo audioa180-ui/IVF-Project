@@ -3,23 +3,25 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:admin_app/providers/admin_provider.dart';
 import 'package:admin_app/theme/admin_theme.dart';
-import 'package:admin_app/models/invoice.dart';
+import 'package:admin_app/models/medication.dart';
 import 'package:intl/intl.dart';
 
-class InvoicesScreen extends StatefulWidget {
-  const InvoicesScreen({super.key});
+class MedicationsScreen extends StatefulWidget {
+  const MedicationsScreen({super.key});
 
   @override
-  State<InvoicesScreen> createState() => _InvoicesScreenState();
+  State<MedicationsScreen> createState() => _MedicationsScreenState();
 }
 
-class _InvoicesScreenState extends State<InvoicesScreen> {
-  List<Invoice>? _invoices;
+class _MedicationsScreenState extends State<MedicationsScreen> {
+  List<Medication>? _medications;
   Map<String, dynamic>? _stats;
-  String? _selectedStatus;
+  String? _selectedCategory;
+  bool? _activeOnly;
+  bool? _lowStockOnly;
   bool _isLoading = false;
 
-  final List<String> _statusOptions = ['All', 'pending', 'partial', 'paid', 'overdue', 'cancelled'];
+  final List<String> _categoryOptions = ['All', 'fertility', 'hormone', 'antibiotic', 'painkiller', 'supplement', 'other'];
 
   @override
   void initState() {
@@ -34,15 +36,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     
     try {
       final results = await Future.wait([
-        adminProvider.getAllInvoices(
-          paymentStatus: _selectedStatus == 'All' ? null : _selectedStatus,
+        adminProvider.getAllMedications(
+          category: _selectedCategory == 'All' ? null : _selectedCategory,
+          isActive: _activeOnly,
+          lowStock: _lowStockOnly,
         ),
-        adminProvider.getInvoiceStats(),
+        adminProvider.getMedicationStats(),
       ]);
 
       if (mounted) {
         setState(() {
-          _invoices = (results[0] as List).map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
+          _medications = (results[0] as List).map((e) => Medication.fromJson(e as Map<String, dynamic>)).toList();
           _stats = results[1] as Map<String, dynamic>?;
           _isLoading = false;
         });
@@ -55,104 +59,19 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   void _clearFilters() {
-    setState(() => _selectedStatus = null);
+    setState(() {
+      _selectedCategory = null;
+      _activeOnly = null;
+      _lowStockOnly = null;
+    });
     _loadData();
-  }
-
-  void _showPaymentDialog(Invoice invoice) {
-    String selectedStatus = invoice.paymentStatus;
-    double paidAmount = invoice.paidAmount ?? 0.0;
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Update Payment'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildStatusOption(
-                'Pending',
-                'pending',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'pending'),
-              ),
-              _buildStatusOption(
-                'Partial',
-                'partial',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'partial'),
-              ),
-              _buildStatusOption(
-                'Paid',
-                'paid',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'paid'),
-              ),
-              _buildStatusOption(
-                'Overdue',
-                'overdue',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'overdue'),
-              ),
-              const SizedBox(height: 16),
-              if (selectedStatus == 'partial' || selectedStatus == 'paid')
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Paid Amount',
-                    prefixText: '\$',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: paidAmount.toString()),
-                  onChanged: (value) {
-                    paidAmount = double.tryParse(value) ?? paidAmount;
-                  },
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _updatePayment(invoice.id, selectedStatus, paidAmount);
-              },
-              child: const Text('Update'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _updatePayment(String invoiceId, String status, double paidAmount) async {
-    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-    try {
-      await adminProvider.updateInvoicePayment(invoiceId, status, paidAmount);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment updated successfully')),
-        );
-        _loadData();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update payment: $e')),
-        );
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invoices'),
+        title: const Text('Medications'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -166,7 +85,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _invoices == null
+          : _medications == null
               ? _buildErrorState()
               : _buildContent(),
     );
@@ -180,7 +99,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           Icon(Icons.error_outline, size: 64, color: AdminTheme.textLight),
           const SizedBox(height: 16),
           Text(
-            'Failed to load invoices',
+            'Failed to load medications',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
@@ -202,7 +121,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           SliverToBoxAdapter(
             child: _buildActiveFilters(),
           ),
-          if (_invoices!.isEmpty)
+          if (_medications!.isEmpty)
             SliverFillRemaining(
               child: _buildEmptyState(),
             )
@@ -212,10 +131,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final invoice = _invoices![index];
-                    return _buildInvoiceCard(invoice, index);
+                    final medication = _medications![index];
+                    return _buildMedicationCard(medication, index);
                   },
-                  childCount: _invoices!.length,
+                  childCount: _medications!.length,
                 ),
               ),
             ),
@@ -240,17 +159,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Total Revenue',
-                    '\$${(_stats!['totalRevenue'] as num).toStringAsFixed(2)}',
-                    AdminTheme.success,
+                    'Total',
+                    _stats!['total'].toString(),
+                    AdminTheme.navyPrimary,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildStatCard(
-                    'Outstanding',
-                    '\$${(_stats!['outstandingAmount'] as num).toStringAsFixed(2)}',
-                    AdminTheme.warning,
+                    'Active',
+                    _stats!['active'].toString(),
+                    AdminTheme.success,
                   ),
                 ),
               ],
@@ -260,17 +179,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Pending',
-                    _stats!['pending'].toString(),
-                    AdminTheme.info,
+                    'Low Stock',
+                    _stats!['lowStock'].toString(),
+                    AdminTheme.error,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildStatCard(
-                    'Paid',
-                    _stats!['paid'].toString(),
-                    AdminTheme.success,
+                    'Expiring Soon',
+                    _stats!['expiringSoon'].toString(),
+                    AdminTheme.warning,
                   ),
                 ),
               ],
@@ -312,7 +231,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Widget _buildActiveFilters() {
-    if (_selectedStatus == null) {
+    if (_selectedCategory == null && _activeOnly == null && _lowStockOnly == null) {
       return const SizedBox.shrink();
     }
 
@@ -321,9 +240,19 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: Wrap(
         spacing: 8,
         children: [
-          if (_selectedStatus != null)
-            _buildFilterChip(_selectedStatus!, () {
-              setState(() => _selectedStatus = null);
+          if (_selectedCategory != null)
+            _buildFilterChip('Category: $_selectedCategory', () {
+              setState(() => _selectedCategory = null);
+              _loadData();
+            }),
+          if (_activeOnly == true)
+            _buildFilterChip('Active Only', () {
+              setState(() => _activeOnly = null);
+              _loadData();
+            }),
+          if (_lowStockOnly == true)
+            _buildFilterChip('Low Stock', () {
+              setState(() => _lowStockOnly = null);
               _loadData();
             }),
           TextButton.icon(
@@ -354,10 +283,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 64, color: AdminTheme.textLight),
+          Icon(Icons.medication_outlined, size: 64, color: AdminTheme.textLight),
           const SizedBox(height: 16),
           Text(
-            'No invoices found',
+            'No medications found',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -372,7 +301,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  Widget _buildInvoiceCard(Invoice invoice, int index) {
+  Widget _buildMedicationCard(Medication medication, int index) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -380,39 +309,47 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
+            color: medication.isLowStock
+                ? AdminTheme.error.withValues(alpha: 0.1)
+                : medication.isActive
+                    ? AdminTheme.success.withValues(alpha: 0.1)
+                    : AdminTheme.textLight.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            _getStatusIcon(invoice.paymentStatus),
-            color: _getStatusColor(invoice.paymentStatus),
+            medication.isLowStock ? Icons.warning : medication.isActive ? Icons.check_circle : Icons.block,
+            color: medication.isLowStock
+                ? AdminTheme.error
+                : medication.isActive
+                    ? AdminTheme.success
+                    : AdminTheme.textMedium,
           ),
         ),
         title: Text(
-          invoice.invoiceNumber,
+          medication.name,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(invoice.patientName),
+            Text(medication.genericName.isEmpty ? medication.name : medication.genericName),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14, color: AdminTheme.textMedium),
+                Icon(Icons.category, size: 14, color: AdminTheme.textMedium),
                 const SizedBox(width: 4),
                 Text(
-                  DateFormat('MMM dd, yyyy').format(invoice.invoiceDate),
+                  medication.categoryDisplay,
                   style: TextStyle(
                     fontSize: 12,
                     color: AdminTheme.textMedium,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(Icons.attach_money, size: 14, color: AdminTheme.textMedium),
+                Icon(Icons.science, size: 14, color: AdminTheme.textMedium),
                 const SizedBox(width: 4),
                 Text(
-                  '\$${invoice.total.toStringAsFixed(2)}',
+                  medication.strength.isEmpty ? 'N/A' : medication.strength,
                   style: TextStyle(
                     fontSize: 12,
                     color: AdminTheme.textMedium,
@@ -429,121 +366,38 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
+                color: medication.isLowStock
+                    ? AdminTheme.error.withValues(alpha: 0.1)
+                    : AdminTheme.navyPale,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                invoice.paymentStatusDisplay,
+                'Stock: ${medication.stock}',
                 style: TextStyle(
                   fontSize: 10,
-                  color: _getStatusColor(invoice.paymentStatus),
+                  color: medication.isLowStock ? AdminTheme.error : AdminTheme.navyDark,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
             const SizedBox(height: 4),
-            if (!invoice.isPaid)
-              InkWell(
-                onTap: () => _showPaymentDialog(invoice),
-                child: Text(
-                  'Update',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AdminTheme.navyPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
+            if (medication.isExpiringSoon)
+              Text(
+                'Expiring',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AdminTheme.warning,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
           ],
         ),
-        onTap: () => _showInvoiceDetails(invoice),
+        onTap: () => _showMedicationDetails(medication),
       ),
     ).animate().fadeIn(delay: (index * 50).ms).slideX();
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return AdminTheme.warning;
-      case 'partial':
-        return AdminTheme.info;
-      case 'paid':
-        return AdminTheme.success;
-      case 'overdue':
-        return AdminTheme.error;
-      case 'cancelled':
-        return AdminTheme.textMedium;
-      default:
-        return AdminTheme.textMedium;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return Icons.pending;
-      case 'partial':
-        return Icons.hourglass_empty;
-      case 'paid':
-        return Icons.check_circle;
-      case 'overdue':
-        return Icons.warning;
-      case 'cancelled':
-        return Icons.cancel;
-      default:
-        return Icons.receipt;
-    }
-  }
-
-  Widget _buildStatusOption(String label, String value, String selectedStatus, VoidCallback onTap) {
-    final isSelected = selectedStatus == value;
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AdminTheme.navyPrimary.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? AdminTheme.navyPrimary : AdminTheme.textMedium,
-                  width: 2,
-                ),
-              ),
-              child: isSelected
-                  ? Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AdminTheme.navyPrimary,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AdminTheme.navyPrimary : AdminTheme.textDark,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showInvoiceDetails(Invoice invoice) {
+  void _showMedicationDetails(Medication medication) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -577,12 +431,20 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
+                            color: medication.isLowStock
+                                ? AdminTheme.error.withValues(alpha: 0.1)
+                                : medication.isActive
+                                    ? AdminTheme.success.withValues(alpha: 0.1)
+                                    : AdminTheme.textLight.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            _getStatusIcon(invoice.paymentStatus),
-                            color: _getStatusColor(invoice.paymentStatus),
+                            medication.isLowStock ? Icons.warning : medication.isActive ? Icons.check_circle : Icons.block,
+                            color: medication.isLowStock
+                                ? AdminTheme.error
+                                : medication.isActive
+                                    ? AdminTheme.success
+                                    : AdminTheme.textMedium,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -591,11 +453,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                invoice.invoiceNumber,
+                                medication.name,
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                               Text(
-                                invoice.patientName,
+                                medication.genericName.isEmpty ? medication.name : medication.genericName,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: AdminTheme.textMedium,
                                 ),
@@ -614,38 +476,45 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   controller: scrollController,
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _buildDetailSection('Invoice Information', [
-                      _buildDetailRow('Invoice Date', DateFormat('MMM dd, yyyy').format(invoice.invoiceDate)),
-                      _buildDetailRow('Due Date', DateFormat('MMM dd, yyyy').format(invoice.dueDate)),
-                      _buildDetailRow('Status', invoice.paymentStatusDisplay),
-                      _buildDetailRow('Payment Method', invoice.paymentMethod ?? 'N/A'),
+                    _buildDetailSection('Basic Information', [
+                      _buildDetailRow('Category', medication.categoryDisplay),
+                      _buildDetailRow('Strength', medication.strength.isEmpty ? 'N/A' : medication.strength),
+                      _buildDetailRow('Manufacturer', medication.manufacturer.isEmpty ? 'N/A' : medication.manufacturer),
+                      _buildDetailRow('Price', '\$${medication.price.toStringAsFixed(2)}'),
+                      _buildDetailRow('Status', medication.isActive ? 'Active' : 'Inactive'),
                     ]),
                     const SizedBox(height: 24),
-                    _buildDetailSection('Financial Summary', [
-                      _buildDetailRow('Subtotal', '\$${invoice.subtotal.toStringAsFixed(2)}'),
-                      _buildDetailRow('Tax', '\$${invoice.tax.toStringAsFixed(2)}'),
-                      _buildDetailRow('Discount', '\$${invoice.discount.toStringAsFixed(2)}'),
-                      _buildDetailRow('Total', '\$${invoice.total.toStringAsFixed(2)}'),
-                      _buildDetailRow('Paid Amount', '\$${invoice.paidAmount.toStringAsFixed(2)}'),
-                      _buildDetailRow('Remaining', '\$${invoice.remainingAmount.toStringAsFixed(2)}'),
+                    _buildDetailSection('Stock Information', [
+                      _buildDetailRow('Current Stock', '${medication.stock} units'),
+                      _buildDetailRow('Min Stock Level', '${medication.minStockLevel} units'),
+                      _buildDetailRow('Batch Number', medication.batchNumber.isEmpty ? 'N/A' : medication.batchNumber),
+                      _buildDetailRow('Expiry Date', medication.expiryDate != null ? DateFormat('MMM dd, yyyy').format(medication.expiryDate!) : 'N/A'),
+                      _buildDetailRow('Storage', medication.storageConditions.isEmpty ? 'N/A' : medication.storageConditions),
                     ]),
                     const SizedBox(height: 24),
-                    if (invoice.items.isNotEmpty)
-                      _buildDetailSection('Items', [
-                        ...invoice.items.map((item) => ListTile(
-                          leading: const Icon(Icons.receipt_long),
-                          title: Text(item.description),
-                          subtitle: Text('${item.quantity} x \$${item.unitPrice.toStringAsFixed(2)}'),
-                          trailing: Text('\$${item.total.toStringAsFixed(2)}'),
+                    if (medication.dosageForms.isNotEmpty)
+                      _buildDetailSection('Dosage Forms', [
+                        ...medication.dosageForms.map((form) => ListTile(
+                          leading: const Icon(Icons.medication),
+                          title: Text(form),
                         )),
                       ]),
                     const SizedBox(height: 24),
-                    _buildDetailSection('Insurance', [
-                      _buildDetailRow('Provider', invoice.insurance.provider.isEmpty ? 'N/A' : invoice.insurance.provider),
-                      _buildDetailRow('Policy Number', invoice.insurance.policyNumber.isEmpty ? 'N/A' : invoice.insurance.policyNumber),
-                      _buildDetailRow('Claim Number', invoice.insurance.claimNumber.isEmpty ? 'N/A' : invoice.insurance.claimNumber),
-                      _buildDetailRow('Coverage', '\$${invoice.insurance.coverageAmount.toStringAsFixed(2)}'),
-                    ]),
+                    if (medication.sideEffects.isNotEmpty)
+                      _buildDetailSection('Side Effects', [
+                        ...medication.sideEffects.map((effect) => ListTile(
+                          leading: const Icon(Icons.warning),
+                          title: Text(effect),
+                        )),
+                      ]),
+                    const SizedBox(height: 24),
+                    if (medication.contraindications.isNotEmpty)
+                      _buildDetailSection('Contraindications', [
+                        ...medication.contraindications.map((contra) => ListTile(
+                          leading: const Icon(Icons.block),
+                          title: Text(contra),
+                        )),
+                      ]),
                   ],
                 ),
               ),
@@ -712,27 +581,27 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Filter Invoices',
+                'Filter Medications',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 24),
               
-              // Status Filter
+              // Category Filter
               Text(
-                'Payment Status',
+                'Category',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
-                children: _statusOptions.map((status) {
-                  final isSelected = _selectedStatus == status;
+                children: _categoryOptions.map((category) {
+                  final isSelected = _selectedCategory == category;
                   return FilterChip(
-                    label: Text(status),
+                    label: Text(category),
                     selected: isSelected,
                     onSelected: (selected) {
                       setSheetState(() {
-                        _selectedStatus = selected ? status : null;
+                        _selectedCategory = selected ? category : null;
                       });
                     },
                     selectedColor: AdminTheme.navyPrimary.withValues(alpha: 0.2),
@@ -742,13 +611,35 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ),
               const SizedBox(height: 24),
               
+              // Active Only Filter
+              SwitchListTile(
+                title: const Text('Active Medications Only'),
+                value: _activeOnly ?? false,
+                onChanged: (value) {
+                  setSheetState(() => _activeOnly = value ? true : null);
+                },
+              ),
+              const SizedBox(height: 8),
+              
+              // Low Stock Filter
+              SwitchListTile(
+                title: const Text('Low Stock Only'),
+                value: _lowStockOnly ?? false,
+                onChanged: (value) {
+                  setSheetState(() => _lowStockOnly = value ? true : null);
+                },
+              ),
+              const SizedBox(height: 24),
+              
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
                         setSheetState(() {
-                          _selectedStatus = null;
+                          _selectedCategory = null;
+                          _activeOnly = null;
+                          _lowStockOnly = null;
                         });
                       },
                       child: const Text('Clear'),

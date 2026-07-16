@@ -3,23 +3,24 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:admin_app/providers/admin_provider.dart';
 import 'package:admin_app/theme/admin_theme.dart';
-import 'package:admin_app/models/invoice.dart';
+import 'package:admin_app/models/patient.dart';
 import 'package:intl/intl.dart';
 
-class InvoicesScreen extends StatefulWidget {
-  const InvoicesScreen({super.key});
+class PatientsScreen extends StatefulWidget {
+  const PatientsScreen({super.key});
 
   @override
-  State<InvoicesScreen> createState() => _InvoicesScreenState();
+  State<PatientsScreen> createState() => _PatientsScreenState();
 }
 
-class _InvoicesScreenState extends State<InvoicesScreen> {
-  List<Invoice>? _invoices;
+class _PatientsScreenState extends State<PatientsScreen> {
+  List<Patient>? _patients;
   Map<String, dynamic>? _stats;
+  String? _searchQuery;
   String? _selectedStatus;
   bool _isLoading = false;
 
-  final List<String> _statusOptions = ['All', 'pending', 'partial', 'paid', 'overdue', 'cancelled'];
+  final List<String> _statusOptions = ['All', 'active', 'inactive', 'archived'];
 
   @override
   void initState() {
@@ -34,15 +35,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     
     try {
       final results = await Future.wait([
-        adminProvider.getAllInvoices(
-          paymentStatus: _selectedStatus == 'All' ? null : _selectedStatus,
+        adminProvider.getAllPatients(
+          search: _searchQuery,
+          status: _selectedStatus == 'All' ? null : _selectedStatus,
         ),
-        adminProvider.getInvoiceStats(),
+        adminProvider.getPatientStats(),
       ]);
 
       if (mounted) {
         setState(() {
-          _invoices = (results[0] as List).map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
+          _patients = (results[0] as List).map((e) => Patient.fromJson(e as Map<String, dynamic>)).toList();
           _stats = results[1] as Map<String, dynamic>?;
           _isLoading = false;
         });
@@ -55,104 +57,18 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   void _clearFilters() {
-    setState(() => _selectedStatus = null);
+    setState(() {
+      _searchQuery = null;
+      _selectedStatus = null;
+    });
     _loadData();
-  }
-
-  void _showPaymentDialog(Invoice invoice) {
-    String selectedStatus = invoice.paymentStatus;
-    double paidAmount = invoice.paidAmount ?? 0.0;
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Update Payment'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildStatusOption(
-                'Pending',
-                'pending',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'pending'),
-              ),
-              _buildStatusOption(
-                'Partial',
-                'partial',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'partial'),
-              ),
-              _buildStatusOption(
-                'Paid',
-                'paid',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'paid'),
-              ),
-              _buildStatusOption(
-                'Overdue',
-                'overdue',
-                selectedStatus,
-                () => setDialogState(() => selectedStatus = 'overdue'),
-              ),
-              const SizedBox(height: 16),
-              if (selectedStatus == 'partial' || selectedStatus == 'paid')
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Paid Amount',
-                    prefixText: '\$',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: paidAmount.toString()),
-                  onChanged: (value) {
-                    paidAmount = double.tryParse(value) ?? paidAmount;
-                  },
-                ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _updatePayment(invoice.id, selectedStatus, paidAmount);
-              },
-              child: const Text('Update'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _updatePayment(String invoiceId, String status, double paidAmount) async {
-    final adminProvider = Provider.of<AdminProvider>(context, listen: false);
-    try {
-      await adminProvider.updateInvoicePayment(invoiceId, status, paidAmount);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment updated successfully')),
-        );
-        _loadData();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update payment: $e')),
-        );
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invoices'),
+        title: const Text('Patients'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -166,7 +82,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _invoices == null
+          : _patients == null
               ? _buildErrorState()
               : _buildContent(),
     );
@@ -180,7 +96,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           Icon(Icons.error_outline, size: 64, color: AdminTheme.textLight),
           const SizedBox(height: 16),
           Text(
-            'Failed to load invoices',
+            'Failed to load patients',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
@@ -202,7 +118,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           SliverToBoxAdapter(
             child: _buildActiveFilters(),
           ),
-          if (_invoices!.isEmpty)
+          if (_patients!.isEmpty)
             SliverFillRemaining(
               child: _buildEmptyState(),
             )
@@ -212,10 +128,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final invoice = _invoices![index];
-                    return _buildInvoiceCard(invoice, index);
+                    final patient = _patients![index];
+                    return _buildPatientCard(patient, index);
                   },
-                  childCount: _invoices!.length,
+                  childCount: _patients!.length,
                 ),
               ),
             ),
@@ -240,17 +156,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Total Revenue',
-                    '\$${(_stats!['totalRevenue'] as num).toStringAsFixed(2)}',
-                    AdminTheme.success,
+                    'Total',
+                    _stats!['total'].toString(),
+                    AdminTheme.navyPrimary,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildStatCard(
-                    'Outstanding',
-                    '\$${(_stats!['outstandingAmount'] as num).toStringAsFixed(2)}',
-                    AdminTheme.warning,
+                    'Active',
+                    _stats!['active'].toString(),
+                    AdminTheme.success,
                   ),
                 ),
               ],
@@ -260,17 +176,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Pending',
-                    _stats!['pending'].toString(),
+                    'Active Cycles',
+                    _stats!['activeCycles'].toString(),
                     AdminTheme.info,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildStatCard(
-                    'Paid',
-                    _stats!['paid'].toString(),
-                    AdminTheme.success,
+                    'Profile Complete',
+                    _stats!['profileComplete'].toString(),
+                    AdminTheme.warning,
                   ),
                 ),
               ],
@@ -312,7 +228,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Widget _buildActiveFilters() {
-    if (_selectedStatus == null) {
+    if (_searchQuery == null && _selectedStatus == null) {
       return const SizedBox.shrink();
     }
 
@@ -321,6 +237,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: Wrap(
         spacing: 8,
         children: [
+          if (_searchQuery != null)
+            _buildFilterChip('Search: $_searchQuery', () {
+              setState(() => _searchQuery = null);
+              _loadData();
+            }),
           if (_selectedStatus != null)
             _buildFilterChip(_selectedStatus!, () {
               setState(() => _selectedStatus = null);
@@ -354,10 +275,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 64, color: AdminTheme.textLight),
+          Icon(Icons.search_off, size: 64, color: AdminTheme.textLight),
           const SizedBox(height: 16),
           Text(
-            'No invoices found',
+            'No patients found',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -372,52 +293,57 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  Widget _buildInvoiceCard(Invoice invoice, int index) {
+  Widget _buildPatientCard(Patient patient, int index) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(
-            _getStatusIcon(invoice.paymentStatus),
-            color: _getStatusColor(invoice.paymentStatus),
+        leading: CircleAvatar(
+          backgroundColor: patient.hasActiveCycle
+              ? AdminTheme.success
+              : AdminTheme.navyPale,
+          child: Text(
+            patient.name[0].toUpperCase(),
+            style: TextStyle(
+              color: patient.hasActiveCycle
+                  ? Colors.white
+                  : AdminTheme.navyDark,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         title: Text(
-          invoice.invoiceNumber,
+          patient.name,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(invoice.patientName),
+            Text(patient.email),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14, color: AdminTheme.textMedium),
+                Icon(Icons.phone, size: 14, color: AdminTheme.textMedium),
                 const SizedBox(width: 4),
                 Text(
-                  DateFormat('MMM dd, yyyy').format(invoice.invoiceDate),
+                  patient.phone.isEmpty ? 'No phone' : patient.phone,
                   style: TextStyle(
                     fontSize: 12,
                     color: AdminTheme.textMedium,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(Icons.attach_money, size: 14, color: AdminTheme.textMedium),
-                const SizedBox(width: 4),
-                Text(
-                  '\$${invoice.total.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AdminTheme.textMedium,
+                if (patient.hasActiveCycle) ...[
+                  Icon(Icons.medical_services, size: 14, color: AdminTheme.success),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Active Cycle - Day ${patient.activeCycle?.currentDay}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AdminTheme.success,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ],
@@ -429,121 +355,49 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
+                color: _getStatusColor(patient.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                invoice.paymentStatusDisplay,
+                patient.statusDisplay,
                 style: TextStyle(
                   fontSize: 10,
-                  color: _getStatusColor(invoice.paymentStatus),
+                  color: _getStatusColor(patient.status),
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
             const SizedBox(height: 4),
-            if (!invoice.isPaid)
-              InkWell(
-                onTap: () => _showPaymentDialog(invoice),
-                child: Text(
-                  'Update',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AdminTheme.navyPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
+            if (!patient.profileComplete)
+              Text(
+                'Incomplete',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AdminTheme.warning,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
           ],
         ),
-        onTap: () => _showInvoiceDetails(invoice),
+        onTap: () => _showPatientDetails(patient),
       ),
     ).animate().fadeIn(delay: (index * 50).ms).slideX();
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'pending':
-        return AdminTheme.warning;
-      case 'partial':
-        return AdminTheme.info;
-      case 'paid':
+      case 'active':
         return AdminTheme.success;
-      case 'overdue':
-        return AdminTheme.error;
-      case 'cancelled':
+      case 'inactive':
+        return AdminTheme.warning;
+      case 'archived':
         return AdminTheme.textMedium;
       default:
         return AdminTheme.textMedium;
     }
   }
 
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return Icons.pending;
-      case 'partial':
-        return Icons.hourglass_empty;
-      case 'paid':
-        return Icons.check_circle;
-      case 'overdue':
-        return Icons.warning;
-      case 'cancelled':
-        return Icons.cancel;
-      default:
-        return Icons.receipt;
-    }
-  }
-
-  Widget _buildStatusOption(String label, String value, String selectedStatus, VoidCallback onTap) {
-    final isSelected = selectedStatus == value;
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AdminTheme.navyPrimary.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? AdminTheme.navyPrimary : AdminTheme.textMedium,
-                  width: 2,
-                ),
-              ),
-              child: isSelected
-                  ? Padding(
-                      padding: const EdgeInsets.all(4),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AdminTheme.navyPrimary,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AdminTheme.navyPrimary : AdminTheme.textDark,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showInvoiceDetails(Invoice invoice) {
+  void _showPatientDetails(Patient patient) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -573,16 +427,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(
-                            _getStatusIcon(invoice.paymentStatus),
-                            color: _getStatusColor(invoice.paymentStatus),
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: AdminTheme.navyPale,
+                          child: Text(
+                            patient.name[0].toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 24,
+                              color: AdminTheme.navyDark,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -591,11 +445,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                invoice.invoiceNumber,
+                                patient.name,
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                               Text(
-                                invoice.patientName,
+                                patient.email,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: AdminTheme.textMedium,
                                 ),
@@ -614,37 +468,36 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   controller: scrollController,
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _buildDetailSection('Invoice Information', [
-                      _buildDetailRow('Invoice Date', DateFormat('MMM dd, yyyy').format(invoice.invoiceDate)),
-                      _buildDetailRow('Due Date', DateFormat('MMM dd, yyyy').format(invoice.dueDate)),
-                      _buildDetailRow('Status', invoice.paymentStatusDisplay),
-                      _buildDetailRow('Payment Method', invoice.paymentMethod ?? 'N/A'),
+                    _buildDetailSection('Contact Information', [
+                      _buildDetailRow('Phone', patient.phone.isEmpty ? 'N/A' : patient.phone),
+                      _buildDetailRow('Address', patient.address.isEmpty ? 'N/A' : patient.address),
+                      _buildDetailRow('Blood Type', patient.bloodType.isEmpty ? 'N/A' : patient.bloodType),
                     ]),
                     const SizedBox(height: 24),
-                    _buildDetailSection('Financial Summary', [
-                      _buildDetailRow('Subtotal', '\$${invoice.subtotal.toStringAsFixed(2)}'),
-                      _buildDetailRow('Tax', '\$${invoice.tax.toStringAsFixed(2)}'),
-                      _buildDetailRow('Discount', '\$${invoice.discount.toStringAsFixed(2)}'),
-                      _buildDetailRow('Total', '\$${invoice.total.toStringAsFixed(2)}'),
-                      _buildDetailRow('Paid Amount', '\$${invoice.paidAmount.toStringAsFixed(2)}'),
-                      _buildDetailRow('Remaining', '\$${invoice.remainingAmount.toStringAsFixed(2)}'),
+                    _buildDetailSection('Partner Information', [
+                      _buildDetailRow('Name', patient.partner.name.isEmpty ? 'N/A' : patient.partner.name),
+                      _buildDetailRow('Email', patient.partner.email.isEmpty ? 'N/A' : patient.partner.email),
+                      _buildDetailRow('Phone', patient.partner.phone.isEmpty ? 'N/A' : patient.partner.phone),
                     ]),
                     const SizedBox(height: 24),
-                    if (invoice.items.isNotEmpty)
-                      _buildDetailSection('Items', [
-                        ...invoice.items.map((item) => ListTile(
-                          leading: const Icon(Icons.receipt_long),
-                          title: Text(item.description),
-                          subtitle: Text('${item.quantity} x \$${item.unitPrice.toStringAsFixed(2)}'),
-                          trailing: Text('\$${item.total.toStringAsFixed(2)}'),
-                        )),
+                    if (patient.hasActiveCycle)
+                      _buildDetailSection('Active Treatment Cycle', [
+                        _buildDetailRow('Protocol', patient.activeCycle!.protocol),
+                        _buildDetailRow('Current Day', 'Day ${patient.activeCycle!.currentDay}'),
+                        _buildDetailRow('Status', patient.activeCycle!.status),
+                        _buildDetailRow('Start Date', DateFormat('MMM dd, yyyy').format(patient.activeCycle!.startDate)),
                       ]),
                     const SizedBox(height: 24),
-                    _buildDetailSection('Insurance', [
-                      _buildDetailRow('Provider', invoice.insurance.provider.isEmpty ? 'N/A' : invoice.insurance.provider),
-                      _buildDetailRow('Policy Number', invoice.insurance.policyNumber.isEmpty ? 'N/A' : invoice.insurance.policyNumber),
-                      _buildDetailRow('Claim Number', invoice.insurance.claimNumber.isEmpty ? 'N/A' : invoice.insurance.claimNumber),
-                      _buildDetailRow('Coverage', '\$${invoice.insurance.coverageAmount.toStringAsFixed(2)}'),
+                    _buildDetailSection('Fertility Profile', [
+                      _buildDetailRow('AMH Level', patient.fertilityProfile.amhLevel?.toString() ?? 'N/A'),
+                      _buildDetailRow('AFC Count', patient.fertilityProfile.afcCount?.toString() ?? 'N/A'),
+                      _buildDetailRow('FSH Level', patient.fertilityProfile.fshLevel?.toString() ?? 'N/A'),
+                    ]),
+                    const SizedBox(height: 24),
+                    _buildDetailSection('Medical History', [
+                      _buildDetailRow('Previous Treatments', patient.medicalHistory.previousTreatments.isEmpty ? 'None' : patient.medicalHistory.previousTreatments.join(', ')),
+                      _buildDetailRow('Allergies', patient.medicalHistory.allergies.isEmpty ? 'None' : patient.medicalHistory.allergies.join(', ')),
+                      _buildDetailRow('Chronic Conditions', patient.medicalHistory.chronicConditions.isEmpty ? 'None' : patient.medicalHistory.chronicConditions.join(', ')),
                     ]),
                   ],
                 ),
@@ -712,14 +565,34 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Filter Invoices',
+                'Filter Patients',
                 style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 24),
+              
+              // Search
+              Text(
+                'Search',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search by name, email, or phone',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onChanged: (value) {
+                  setSheetState(() => _searchQuery = value.isEmpty ? null : value);
+                },
               ),
               const SizedBox(height: 24),
               
               // Status Filter
               Text(
-                'Payment Status',
+                'Status',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -748,6 +621,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                     child: OutlinedButton(
                       onPressed: () {
                         setSheetState(() {
+                          _searchQuery = null;
                           _selectedStatus = null;
                         });
                       },

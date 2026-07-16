@@ -3,23 +3,25 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:admin_app/providers/admin_provider.dart';
 import 'package:admin_app/theme/admin_theme.dart';
-import 'package:admin_app/models/invoice.dart';
+import 'package:admin_app/models/treatment_cycle.dart';
 import 'package:intl/intl.dart';
 
-class InvoicesScreen extends StatefulWidget {
-  const InvoicesScreen({super.key});
+class TreatmentCyclesScreen extends StatefulWidget {
+  const TreatmentCyclesScreen({super.key});
 
   @override
-  State<InvoicesScreen> createState() => _InvoicesScreenState();
+  State<TreatmentCyclesScreen> createState() => _TreatmentCyclesScreenState();
 }
 
-class _InvoicesScreenState extends State<InvoicesScreen> {
-  List<Invoice>? _invoices;
+class _TreatmentCyclesScreenState extends State<TreatmentCyclesScreen> {
+  List<TreatmentCycle>? _cycles;
   Map<String, dynamic>? _stats;
   String? _selectedStatus;
+  String? _selectedType;
   bool _isLoading = false;
 
-  final List<String> _statusOptions = ['All', 'pending', 'partial', 'paid', 'overdue', 'cancelled'];
+  final List<String> _statusOptions = ['All', 'planned', 'active', 'paused', 'completed', 'cancelled', 'pregnant'];
+  final List<String> _typeOptions = ['All', 'IVF', 'IUI', 'ICSI', 'FET', 'Egg Freezing'];
 
   @override
   void initState() {
@@ -34,15 +36,16 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     
     try {
       final results = await Future.wait([
-        adminProvider.getAllInvoices(
-          paymentStatus: _selectedStatus == 'All' ? null : _selectedStatus,
+        adminProvider.getAllTreatmentCycles(
+          status: _selectedStatus == 'All' ? null : _selectedStatus,
+          cycleType: _selectedType == 'All' ? null : _selectedType,
         ),
-        adminProvider.getInvoiceStats(),
+        adminProvider.getTreatmentCycleStats(),
       ]);
 
       if (mounted) {
         setState(() {
-          _invoices = (results[0] as List).map((e) => Invoice.fromJson(e as Map<String, dynamic>)).toList();
+          _cycles = (results[0] as List).map((e) => TreatmentCycle.fromJson(e as Map<String, dynamic>)).toList();
           _stats = results[1] as Map<String, dynamic>?;
           _isLoading = false;
         });
@@ -55,60 +58,60 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   void _clearFilters() {
-    setState(() => _selectedStatus = null);
+    setState(() {
+      _selectedStatus = null;
+      _selectedType = null;
+    });
     _loadData();
   }
 
-  void _showPaymentDialog(Invoice invoice) {
-    String selectedStatus = invoice.paymentStatus;
-    double paidAmount = invoice.paidAmount ?? 0.0;
+  void _showStatusDialog(TreatmentCycle cycle) {
+    String selectedStatus = cycle.status;
     
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Update Payment'),
+          title: const Text('Update Status'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildStatusOption(
-                'Pending',
-                'pending',
+                'Planned',
+                'planned',
                 selectedStatus,
-                () => setDialogState(() => selectedStatus = 'pending'),
+                () => setDialogState(() => selectedStatus = 'planned'),
               ),
               _buildStatusOption(
-                'Partial',
-                'partial',
+                'Active',
+                'active',
                 selectedStatus,
-                () => setDialogState(() => selectedStatus = 'partial'),
+                () => setDialogState(() => selectedStatus = 'active'),
               ),
               _buildStatusOption(
-                'Paid',
-                'paid',
+                'Paused',
+                'paused',
                 selectedStatus,
-                () => setDialogState(() => selectedStatus = 'paid'),
+                () => setDialogState(() => selectedStatus = 'paused'),
               ),
               _buildStatusOption(
-                'Overdue',
-                'overdue',
+                'Completed',
+                'completed',
                 selectedStatus,
-                () => setDialogState(() => selectedStatus = 'overdue'),
+                () => setDialogState(() => selectedStatus = 'completed'),
               ),
-              const SizedBox(height: 16),
-              if (selectedStatus == 'partial' || selectedStatus == 'paid')
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Paid Amount',
-                    prefixText: '\$',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: paidAmount.toString()),
-                  onChanged: (value) {
-                    paidAmount = double.tryParse(value) ?? paidAmount;
-                  },
-                ),
+              _buildStatusOption(
+                'Cancelled',
+                'cancelled',
+                selectedStatus,
+                () => setDialogState(() => selectedStatus = 'cancelled'),
+              ),
+              _buildStatusOption(
+                'Pregnant',
+                'pregnant',
+                selectedStatus,
+                () => setDialogState(() => selectedStatus = 'pregnant'),
+              ),
             ],
           ),
           actions: [
@@ -119,7 +122,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _updatePayment(invoice.id, selectedStatus, paidAmount);
+                _updateStatus(cycle.id, selectedStatus);
               },
               child: const Text('Update'),
             ),
@@ -129,20 +132,20 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  Future<void> _updatePayment(String invoiceId, String status, double paidAmount) async {
+  Future<void> _updateStatus(String cycleId, String status) async {
     final adminProvider = Provider.of<AdminProvider>(context, listen: false);
     try {
-      await adminProvider.updateInvoicePayment(invoiceId, status, paidAmount);
+      await adminProvider.updateTreatmentCycleStatus(cycleId, status);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment updated successfully')),
+          const SnackBar(content: Text('Status updated successfully')),
         );
         _loadData();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update payment: $e')),
+          SnackBar(content: Text('Failed to update status: $e')),
         );
       }
     }
@@ -152,7 +155,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Invoices'),
+        title: const Text('Treatment Cycles'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -166,7 +169,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _invoices == null
+          : _cycles == null
               ? _buildErrorState()
               : _buildContent(),
     );
@@ -180,7 +183,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           Icon(Icons.error_outline, size: 64, color: AdminTheme.textLight),
           const SizedBox(height: 16),
           Text(
-            'Failed to load invoices',
+            'Failed to load treatment cycles',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
@@ -202,7 +205,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           SliverToBoxAdapter(
             child: _buildActiveFilters(),
           ),
-          if (_invoices!.isEmpty)
+          if (_cycles!.isEmpty)
             SliverFillRemaining(
               child: _buildEmptyState(),
             )
@@ -212,10 +215,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final invoice = _invoices![index];
-                    return _buildInvoiceCard(invoice, index);
+                    final cycle = _cycles![index];
+                    return _buildCycleCard(cycle, index);
                   },
-                  childCount: _invoices!.length,
+                  childCount: _cycles!.length,
                 ),
               ),
             ),
@@ -240,17 +243,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Total Revenue',
-                    '\$${(_stats!['totalRevenue'] as num).toStringAsFixed(2)}',
-                    AdminTheme.success,
+                    'Total',
+                    _stats!['total'].toString(),
+                    AdminTheme.navyPrimary,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildStatCard(
-                    'Outstanding',
-                    '\$${(_stats!['outstandingAmount'] as num).toStringAsFixed(2)}',
-                    AdminTheme.warning,
+                    'Active',
+                    _stats!['active'].toString(),
+                    AdminTheme.info,
                   ),
                 ),
               ],
@@ -260,17 +263,17 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Pending',
-                    _stats!['pending'].toString(),
-                    AdminTheme.info,
+                    'Pregnant',
+                    _stats!['pregnant'].toString(),
+                    AdminTheme.success,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildStatCard(
-                    'Paid',
-                    _stats!['paid'].toString(),
-                    AdminTheme.success,
+                    'Success Rate',
+                    '${_stats!['successRate']}%',
+                    AdminTheme.warning,
                   ),
                 ),
               ],
@@ -312,7 +315,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Widget _buildActiveFilters() {
-    if (_selectedStatus == null) {
+    if (_selectedStatus == null && _selectedType == null) {
       return const SizedBox.shrink();
     }
 
@@ -324,6 +327,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           if (_selectedStatus != null)
             _buildFilterChip(_selectedStatus!, () {
               setState(() => _selectedStatus = null);
+              _loadData();
+            }),
+          if (_selectedType != null)
+            _buildFilterChip(_selectedType!, () {
+              setState(() => _selectedType = null);
               _loadData();
             }),
           TextButton.icon(
@@ -354,10 +362,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 64, color: AdminTheme.textLight),
+          Icon(Icons.medical_services_outlined, size: 64, color: AdminTheme.textLight),
           const SizedBox(height: 16),
           Text(
-            'No invoices found',
+            'No treatment cycles found',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -372,7 +380,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  Widget _buildInvoiceCard(Invoice invoice, int index) {
+  Widget _buildCycleCard(TreatmentCycle cycle, int index) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -380,39 +388,55 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
+            color: _getStatusColor(cycle.status).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            _getStatusIcon(invoice.paymentStatus),
-            color: _getStatusColor(invoice.paymentStatus),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Day ${cycle.currentDay}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: _getStatusColor(cycle.status),
+                ),
+              ),
+              Text(
+                cycle.cycleTypeDisplay,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AdminTheme.textMedium,
+                ),
+              ),
+            ],
           ),
         ),
         title: Text(
-          invoice.invoiceNumber,
+          cycle.patientName,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(invoice.patientName),
+            Text(cycle.doctorName),
             const SizedBox(height: 4),
             Row(
               children: [
                 Icon(Icons.calendar_today, size: 14, color: AdminTheme.textMedium),
                 const SizedBox(width: 4),
                 Text(
-                  DateFormat('MMM dd, yyyy').format(invoice.invoiceDate),
+                  DateFormat('MMM dd, yyyy').format(cycle.startDate),
                   style: TextStyle(
                     fontSize: 12,
                     color: AdminTheme.textMedium,
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(Icons.attach_money, size: 14, color: AdminTheme.textMedium),
+                Icon(Icons.science, size: 14, color: AdminTheme.textMedium),
                 const SizedBox(width: 4),
                 Text(
-                  '\$${invoice.total.toStringAsFixed(2)}',
+                  cycle.protocol,
                   style: TextStyle(
                     fontSize: 12,
                     color: AdminTheme.textMedium,
@@ -429,22 +453,22 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
+                color: _getStatusColor(cycle.status).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                invoice.paymentStatusDisplay,
+                cycle.statusDisplay,
                 style: TextStyle(
                   fontSize: 10,
-                  color: _getStatusColor(invoice.paymentStatus),
+                  color: _getStatusColor(cycle.status),
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
             const SizedBox(height: 4),
-            if (!invoice.isPaid)
+            if (cycle.isActive)
               InkWell(
-                onTap: () => _showPaymentDialog(invoice),
+                onTap: () => _showStatusDialog(cycle),
                 child: Text(
                   'Update',
                   style: TextStyle(
@@ -456,42 +480,27 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ),
           ],
         ),
-        onTap: () => _showInvoiceDetails(invoice),
+        onTap: () => _showCycleDetails(cycle),
       ),
     ).animate().fadeIn(delay: (index * 50).ms).slideX();
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'pending':
-        return AdminTheme.warning;
-      case 'partial':
+      case 'planned':
+        return AdminTheme.textMedium;
+      case 'active':
         return AdminTheme.info;
-      case 'paid':
-        return AdminTheme.success;
-      case 'overdue':
+      case 'paused':
+        return AdminTheme.warning;
+      case 'completed':
+        return AdminTheme.textMedium;
+      case 'cancelled':
         return AdminTheme.error;
-      case 'cancelled':
-        return AdminTheme.textMedium;
+      case 'pregnant':
+        return AdminTheme.success;
       default:
         return AdminTheme.textMedium;
-    }
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return Icons.pending;
-      case 'partial':
-        return Icons.hourglass_empty;
-      case 'paid':
-        return Icons.check_circle;
-      case 'overdue':
-        return Icons.warning;
-      case 'cancelled':
-        return Icons.cancel;
-      default:
-        return Icons.receipt;
     }
   }
 
@@ -543,7 +552,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     );
   }
 
-  void _showInvoiceDetails(Invoice invoice) {
+  void _showCycleDetails(TreatmentCycle cycle) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -577,12 +586,28 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: _getStatusColor(invoice.paymentStatus).withValues(alpha: 0.1),
+                            color: _getStatusColor(cycle.status).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(
-                            _getStatusIcon(invoice.paymentStatus),
-                            color: _getStatusColor(invoice.paymentStatus),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Day ${cycle.currentDay}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: _getStatusColor(cycle.status),
+                                ),
+                              ),
+                              Text(
+                                cycle.cycleTypeDisplay,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AdminTheme.textMedium,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -591,11 +616,11 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                invoice.invoiceNumber,
+                                cycle.patientName,
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                               Text(
-                                invoice.patientName,
+                                cycle.doctorName,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: AdminTheme.textMedium,
                                 ),
@@ -614,38 +639,59 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   controller: scrollController,
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _buildDetailSection('Invoice Information', [
-                      _buildDetailRow('Invoice Date', DateFormat('MMM dd, yyyy').format(invoice.invoiceDate)),
-                      _buildDetailRow('Due Date', DateFormat('MMM dd, yyyy').format(invoice.dueDate)),
-                      _buildDetailRow('Status', invoice.paymentStatusDisplay),
-                      _buildDetailRow('Payment Method', invoice.paymentMethod ?? 'N/A'),
+                    _buildDetailSection('Cycle Information', [
+                      _buildDetailRow('Type', cycle.cycleTypeDisplay),
+                      _buildDetailRow('Protocol', cycle.protocol),
+                      _buildDetailRow('Start Date', DateFormat('MMM dd, yyyy').format(cycle.startDate)),
+                      _buildDetailRow('Current Day', 'Day ${cycle.currentDay}'),
+                      _buildDetailRow('Status', cycle.statusDisplay),
                     ]),
                     const SizedBox(height: 24),
-                    _buildDetailSection('Financial Summary', [
-                      _buildDetailRow('Subtotal', '\$${invoice.subtotal.toStringAsFixed(2)}'),
-                      _buildDetailRow('Tax', '\$${invoice.tax.toStringAsFixed(2)}'),
-                      _buildDetailRow('Discount', '\$${invoice.discount.toStringAsFixed(2)}'),
-                      _buildDetailRow('Total', '\$${invoice.total.toStringAsFixed(2)}'),
-                      _buildDetailRow('Paid Amount', '\$${invoice.paidAmount.toStringAsFixed(2)}'),
-                      _buildDetailRow('Remaining', '\$${invoice.remainingAmount.toStringAsFixed(2)}'),
-                    ]),
-                    const SizedBox(height: 24),
-                    if (invoice.items.isNotEmpty)
-                      _buildDetailSection('Items', [
-                        ...invoice.items.map((item) => ListTile(
-                          leading: const Icon(Icons.receipt_long),
-                          title: Text(item.description),
-                          subtitle: Text('${item.quantity} x \$${item.unitPrice.toStringAsFixed(2)}'),
-                          trailing: Text('\$${item.total.toStringAsFixed(2)}'),
-                        )),
+                    if (cycle.stimulation.startDate != null)
+                      _buildDetailSection('Stimulation Phase', [
+                        _buildDetailRow('Start Date', DateFormat('MMM dd, yyyy').format(cycle.stimulation.startDate!)),
+                        _buildDetailRow('Medications', cycle.stimulation.medications.isEmpty ? 'None' : cycle.stimulation.medications.map((m) => m.name).join(', ')),
+                        _buildDetailRow('Monitoring Scans', '${cycle.stimulation.monitoringScans.length} scans'),
                       ]),
                     const SizedBox(height: 24),
-                    _buildDetailSection('Insurance', [
-                      _buildDetailRow('Provider', invoice.insurance.provider.isEmpty ? 'N/A' : invoice.insurance.provider),
-                      _buildDetailRow('Policy Number', invoice.insurance.policyNumber.isEmpty ? 'N/A' : invoice.insurance.policyNumber),
-                      _buildDetailRow('Claim Number', invoice.insurance.claimNumber.isEmpty ? 'N/A' : invoice.insurance.claimNumber),
-                      _buildDetailRow('Coverage', '\$${invoice.insurance.coverageAmount.toStringAsFixed(2)}'),
-                    ]),
+                    if (cycle.trigger.date != null)
+                      _buildDetailSection('Trigger', [
+                        _buildDetailRow('Date', DateFormat('MMM dd, yyyy').format(cycle.trigger.date!)),
+                        _buildDetailRow('Medication', cycle.trigger.medication),
+                        _buildDetailRow('Dosage', cycle.trigger.dosage),
+                      ]),
+                    const SizedBox(height: 24),
+                    if (cycle.opu.date != null)
+                      _buildDetailSection('OPU', [
+                        _buildDetailRow('Date', DateFormat('MMM dd, yyyy').format(cycle.opu.date!)),
+                        _buildDetailRow('Eggs Retrieved', cycle.opu.eggsRetrieved?.toString() ?? 'N/A'),
+                        _buildDetailRow('Mature Eggs', cycle.opu.matureEggs?.toString() ?? 'N/A'),
+                      ]),
+                    const SizedBox(height: 24),
+                    if (cycle.embryology.fertilized != null)
+                      _buildDetailSection('Embryology', [
+                        _buildDetailRow('Fertilization Method', cycle.embryology.fertilizationMethod),
+                        _buildDetailRow('Fertilized', cycle.embryology.fertilized?.toString() ?? 'N/A'),
+                        _buildDetailRow('Day 3 Embryos', cycle.embryology.day3Embryos?.toString() ?? 'N/A'),
+                        _buildDetailRow('Day 5 Blastocysts', cycle.embryology.day5Blastocysts?.toString() ?? 'N/A'),
+                        _buildDetailRow('Cryopreserved', cycle.embryology.cryopreserved?.toString() ?? 'N/A'),
+                      ]),
+                    const SizedBox(height: 24),
+                    if (cycle.transfer.date != null)
+                      _buildDetailSection('Transfer', [
+                        _buildDetailRow('Date', DateFormat('MMM dd, yyyy').format(cycle.transfer.date!)),
+                        _buildDetailRow('Type', cycle.transfer.type),
+                        _buildDetailRow('Embryos Transferred', cycle.transfer.embryosTransferred?.toString() ?? 'N/A'),
+                        _buildDetailRow('Embryo Quality', cycle.transfer.embryoQuality),
+                      ]),
+                    const SizedBox(height: 24),
+                    if (cycle.outcome.pregnancyTestDate != null)
+                      _buildDetailSection('Outcome', [
+                        _buildDetailRow('Test Date', DateFormat('MMM dd, yyyy').format(cycle.outcome.pregnancyTestDate!)),
+                        _buildDetailRow('Result', cycle.outcome.pregnancyTestResult),
+                        _buildDetailRow('HCG Level', cycle.outcome.hcgLevel?.toString() ?? 'N/A'),
+                        _buildDetailRow('Heartbeat Detected', cycle.outcome.heartbeatDetected?.toString() ?? 'N/A'),
+                      ]),
                   ],
                 ),
               ),
@@ -680,7 +726,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 140,
             child: Text(
               label,
               style: TextStyle(
@@ -712,14 +758,14 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Filter Invoices',
+                'Filter Cycles',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 24),
               
               // Status Filter
               Text(
-                'Payment Status',
+                'Status',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -742,6 +788,31 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
               ),
               const SizedBox(height: 24),
               
+              // Type Filter
+              Text(
+                'Cycle Type',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: _typeOptions.map((type) {
+                  final isSelected = _selectedType == type;
+                  return FilterChip(
+                    label: Text(type),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setSheetState(() {
+                        _selectedType = selected ? type : null;
+                      });
+                    },
+                    selectedColor: AdminTheme.navyPrimary.withValues(alpha: 0.2),
+                    checkmarkColor: AdminTheme.navyPrimary,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+              
               Row(
                 children: [
                   Expanded(
@@ -749,6 +820,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                       onPressed: () {
                         setSheetState(() {
                           _selectedStatus = null;
+                          _selectedType = null;
                         });
                       },
                       child: const Text('Clear'),
