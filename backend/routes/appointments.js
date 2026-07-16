@@ -17,9 +17,10 @@ function auth(req, res, next) {
   }
 }
 
+// Patient routes
 router.get('/', auth, async (req, res) => {
   try {
-    const appointments = await Appointment.find({ userId: req.user.id }).sort({ date: -1 });
+    const appointments = await Appointment.find({ userId: req.user.userId }).sort({ date: -1 });
     res.json(appointments);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -30,7 +31,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const { doctorId, doctorName, clinic, date, time } = req.body;
     const appointment = await Appointment.create({
-      userId: req.user.id, doctorId, doctorName, clinic,
+      userId: req.user.userId, doctorId, doctorName, clinic,
       date: new Date(date), time, status: 'upcoming'
     });
     res.status(201).json(appointment);
@@ -42,7 +43,7 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const appointment = await Appointment.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
+      { _id: req.params.id, userId: req.user.userId },
       { $set: req.body },
       { new: true }
     );
@@ -56,7 +57,7 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const appointment = await Appointment.findOneAndDelete(
-      { _id: req.params.id, userId: req.user.id }
+      { _id: req.params.id, userId: req.user.userId }
     );
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
     res.json({ message: 'Cancelled' });

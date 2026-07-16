@@ -25,7 +25,7 @@ router.get('/admin/all', auth, async (req, res) => {
     if (category) filter.category = category;
     if (isActive !== undefined) filter.isActive = isActive === 'true';
     if (lowStock === 'true') {
-      filter.stock = { $lte: '$minStockLevel' };
+      filter.$expr = { $lte: ['$stock', '$minStockLevel'] };
     }
     
     const medications = await Medication.find(filter).sort({ name: 1 });
@@ -103,9 +103,10 @@ router.get('/admin/stats', auth, async (req, res) => {
   try {
     const total = await Medication.countDocuments();
     const active = await Medication.countDocuments({ isActive: true });
-    const lowStock = await Medication.countDocuments({ 
-      $expr: { $lte: ['$stock', '$minStockLevel'] } 
-    });
+    
+    // Get all medications and filter for low stock
+    const allMedications = await Medication.find({});
+    const lowStock = allMedications.filter(med => med.stock <= med.minStockLevel).length;
     
     // By category
     const byCategory = await Medication.aggregate([
