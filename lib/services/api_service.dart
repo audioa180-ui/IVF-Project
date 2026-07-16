@@ -4,11 +4,12 @@ import 'package:ivf_patient_app/models/user.dart';
 import 'package:ivf_patient_app/models/doctor.dart';
 import 'package:ivf_patient_app/models/appointment.dart';
 import 'package:ivf_patient_app/models/blog.dart';
+import 'package:ivf_patient_app/config/app_config.dart';
 
 class ApiService {
   static String _baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:4000/api',
+    defaultValue: AppConfig.apiUrl,
   );
 
   static void setBaseUrl(String url) => _baseUrl = url;
