@@ -27,6 +27,11 @@ app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/blogs', require('./routes/blogs'));
 app.use('/api/data', require('./routes/data'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/patients', require('./routes/patients'));
+app.use('/api/treatmentCycles', require('./routes/treatmentCycles'));
+app.use('/api/labResults', require('./routes/labResults'));
+app.use('/api/medications', require('./routes/medications'));
+app.use('/api/invoices', require('./routes/invoices'));
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

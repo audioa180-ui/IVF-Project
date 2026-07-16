@@ -1,43 +1,109 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:ivf_patient_app/data/mock_data.dart';
 import 'package:ivf_patient_app/theme/app_theme.dart';
+import 'package:ivf_patient_app/services/api_service.dart';
+import 'package:provider/provider.dart';
+import 'package:ivf_patient_app/providers/user_provider.dart';
 
-class TreatmentJourneyScreen extends StatelessWidget {
+class TreatmentJourneyScreen extends StatefulWidget {
   const TreatmentJourneyScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final steps = MockData.treatmentSteps;
-    final completedCount =
-        steps.where((s) => s.status == TreatmentStatus.completed).length;
-    final inProgressCount =
-        steps.where((s) => s.status == TreatmentStatus.inProgress).length;
-    final totalSteps = steps.length;
-    final progress = (completedCount + inProgressCount * 0.5) / totalSteps;
+  State<TreatmentJourneyScreen> createState() => _TreatmentJourneyScreenState();
+}
 
+class _TreatmentJourneyScreenState extends State<TreatmentJourneyScreen> {
+  List<dynamic> _treatmentCycles = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTreatmentCycles();
+  }
+
+  Future<void> _loadTreatmentCycles() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      final cycles = await apiService.getPatientTreatmentCycles();
+      
+      if (mounted) {
+        setState(() {
+          _treatmentCycles = cycles;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: AppSpacing.lg),
-              _buildProgressCard(context, progress, completedCount,
-                  inProgressCount, totalSteps),
-              const SizedBox(height: AppSpacing.lg),
-              _buildTimeline(context, steps),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _treatmentCycles.isEmpty
+                ? _buildEmptyState()
+                : _buildContent(),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.medical_services_outlined, size: 64, color: AppColors.textLight),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'No Treatment Cycles Yet',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Your treatment journey will appear here once started by your doctor',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildContent() {
+    return RefreshIndicator(
+      onRefresh: _loadTreatmentCycles,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: AppSpacing.lg),
+            ..._treatmentCycles.asMap().entries.map((entry) {
+              final index = entry.key;
+              final cycle = entry.value;
+              return _buildCycleCard(cycle, index);
+            }),
+          ],
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -54,284 +120,162 @@ class TreatmentJourneyScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressCard(
-    BuildContext context,
-    double progress,
-    int completedCount,
-    int inProgressCount,
-    int totalSteps,
-  ) {
+  Widget _buildCycleCard(dynamic cycle, int index) {
+    final status = cycle['status'] ?? 'unknown';
+    final cycleType = cycle['cycleType'] ?? 'IVF';
+    final startDate = cycle['startDate'] != null 
+        ? DateTime.parse(cycle['startDate']) 
+        : DateTime.now();
+    
+    final statusColor = _getStatusColor(status);
+    final statusIcon = _getStatusIcon(status);
+
     return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Overall Progress',
+                  'Cycle ${index + 1} - $cycleType',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                Text(
-                  '${(progress * 100).toStringAsFixed(0)}%',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              height: 12,
-              decoration: BoxDecoration(
-                color: AppColors.card,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: FractionallySizedBox(
-                widthFactor: progress,
-                alignment: Alignment.centerLeft,
-                child: Container(
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.primary, AppColors.secondary],
-                    ),
-                    borderRadius: BorderRadius.circular(6),
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppBorderRadius.sm),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(statusIcon, size: 14, color: statusColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        _getStatusDisplay(status),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem(
-                    context, 'Completed', completedCount, AppColors.success),
-                _buildStatItem(
-                    context, 'In Progress', inProgressCount, AppColors.warning),
-                _buildStatItem(
-                    context,
-                    'Remaining',
-                    totalSteps - completedCount - inProgressCount,
-                    AppColors.textSecondary),
               ],
             ),
+            const SizedBox(height: AppSpacing.md),
+            _buildCycleDetails(cycle),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(delay: (index * 100).ms).slideX();
   }
 
-  Widget _buildStatItem(
-      BuildContext context, String label, int value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value.toString(),
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimeline(BuildContext context, List steps) {
+  Widget _buildCycleDetails(dynamic cycle) {
+    final startDate = cycle['startDate'] != null 
+        ? DateTime.parse(cycle['startDate']) 
+        : null;
+    final endDate = cycle['endDate'] != null 
+        ? DateTime.parse(cycle['endDate']) 
+        : null;
+    final doctorName = cycle['doctorName'] ?? 'Not assigned';
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Treatment Steps',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ...steps.asMap().entries.map((entry) {
-          final index = entry.key;
-          final step = entry.value;
-          final isLast = index == steps.length - 1;
-
-          return Column(
-            children: [
-              _buildTimelineItem(context, step, isLast),
-              if (!isLast) _buildTimelineConnector(context, step.status),
-            ],
-          );
-        }),
+        _buildDetailRow('Doctor', doctorName),
+        if (startDate != null) _buildDetailRow('Start Date', _formatDate(startDate)),
+        if (endDate != null) _buildDetailRow('End Date', _formatDate(endDate)),
+        if (cycle['notes'] != null && cycle['notes'].isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Notes: ${cycle['notes']}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildTimelineItem(
-      BuildContext context, TreatmentStep step, bool isLast) {
-    final icon = _getStatusIcon(step.status);
-    final iconColor = _getStatusColor(step.status);
-    final backgroundColor = _getStatusBackgroundColor(step.status);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: iconColor,
-              width: 2,
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        step.title,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      _buildStatusBadge(context, step.status),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    step.description,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                  ),
-                  if (step.date != null) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_today,
-                          size: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          step.date!,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimelineConnector(BuildContext context, TreatmentStatus status) {
-    final color = _getStatusColor(status);
-
+  Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(left: 19),
-      child: Container(
-        width: 2,
-        height: 20,
-        decoration: BoxDecoration(
-          color: status == TreatmentStatus.locked
-              ? AppColors.border
-              : color.withValues(alpha: 0.3),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(BuildContext context, TreatmentStatus status) {
-    final config = _getStatusConfig(status);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 4,
-      ),
-      decoration: BoxDecoration(
-        color: config.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppBorderRadius.sm),
-      ),
-      child: Text(
-        config.label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: config.color,
-              fontWeight: FontWeight.w600,
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  IconData _getStatusIcon(TreatmentStatus status) {
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _getStatusDisplay(String status) {
     switch (status) {
-      case TreatmentStatus.completed:
-        return Icons.check;
-      case TreatmentStatus.inProgress:
-        return Icons.hourglass_top;
-      case TreatmentStatus.locked:
-        return Icons.lock;
+      case 'active':
+        return 'Active';
+      case 'completed':
+        return 'Completed';
+      case 'pregnant':
+        return 'Pregnant';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
     }
   }
 
-  Color _getStatusColor(TreatmentStatus status) {
+  Color _getStatusColor(String status) {
     switch (status) {
-      case TreatmentStatus.completed:
-        return AppColors.success;
-      case TreatmentStatus.inProgress:
+      case 'active':
         return AppColors.primary;
-      case TreatmentStatus.locked:
-        return AppColors.textLight;
+      case 'completed':
+        return AppColors.success;
+      case 'pregnant':
+        return AppColors.success;
+      case 'cancelled':
+        return AppColors.error;
+      default:
+        return AppColors.textSecondary;
     }
   }
 
-  Color _getStatusBackgroundColor(TreatmentStatus status) {
+  IconData _getStatusIcon(String status) {
     switch (status) {
-      case TreatmentStatus.completed:
-        return AppColors.success.withValues(alpha: 0.1);
-      case TreatmentStatus.inProgress:
-        return AppColors.primary.withValues(alpha: 0.1);
-      case TreatmentStatus.locked:
-        return AppColors.card;
+      case 'active':
+        return Icons.play_circle;
+      case 'completed':
+        return Icons.check_circle;
+      case 'pregnant':
+        return Icons.favorite;
+      case 'cancelled':
+        return Icons.cancel;
+      default:
+        return Icons.help;
     }
   }
-
-  _StatusConfig _getStatusConfig(TreatmentStatus status) {
-    switch (status) {
-      case TreatmentStatus.completed:
-        return _StatusConfig(color: AppColors.success, label: 'Completed');
-      case TreatmentStatus.inProgress:
-        return _StatusConfig(color: AppColors.primary, label: 'In Progress');
-      case TreatmentStatus.locked:
-        return _StatusConfig(color: AppColors.textSecondary, label: 'Locked');
-    }
-  }
-}
-
-class _StatusConfig {
-  final Color color;
-  final String label;
-
-  _StatusConfig({required this.color, required this.label});
 }

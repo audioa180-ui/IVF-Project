@@ -65,4 +65,79 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// Admin routes - get all appointments with optional filters
+router.get('/admin/all', auth, async (req, res) => {
+  try {
+    const { doctorId, userId, status, startDate, endDate } = req.query;
+    const filter = {};
+    
+    if (doctorId) filter.doctorId = doctorId;
+    if (userId) filter.userId = userId;
+    if (status) filter.status = status;
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = new Date(startDate);
+      if (endDate) filter.date.$lte = new Date(endDate);
+    }
+    
+    const appointments = await Appointment.find(filter)
+      .sort({ date: -1, time: -1 })
+      .populate('userId', 'name email');
+    res.json(appointments);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Admin route - update appointment status
+router.put('/admin/:id/status', auth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const appointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+    res.json(appointment);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Admin route - get appointment statistics
+router.get('/admin/stats', auth, async (req, res) => {
+  try {
+    const total = await Appointment.countDocuments();
+    const upcoming = await Appointment.countDocuments({ status: 'upcoming' });
+    const completed = await Appointment.countDocuments({ status: 'completed' });
+    const cancelled = await Appointment.countDocuments({ status: 'cancelled' });
+    
+    // Get appointments by doctor
+    const byDoctor = await Appointment.aggregate([
+      { $group: { _id: '$doctorName', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    // Get upcoming appointments in next 7 days
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const upcomingThisWeek = await Appointment.countDocuments({
+      status: 'upcoming',
+      date: { $gte: new Date(), $lte: nextWeek }
+    });
+    
+    res.json({
+      total,
+      upcoming,
+      completed,
+      cancelled,
+      byDoctor,
+      upcomingThisWeek
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 module.exports = router;

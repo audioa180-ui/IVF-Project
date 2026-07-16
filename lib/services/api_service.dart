@@ -175,6 +175,34 @@ class ApiService {
     final res = await http.get(Uri.parse('$_baseUrl/data/categories'));
     return List<String>.from(await _handleResponse(res) as List);
   }
+
+  // Patient treatment cycles (admin-managed data)
+  Future<List<dynamic>> getPatientTreatmentCycles() async {
+    final res = await http.get(Uri.parse('$_baseUrl/treatmentCycles/patient'), headers: _headers);
+    return await _handleResponse(res) as List;
+  }
+
+  Future<Map<String, dynamic>> getTreatmentCycleDetails(String cycleId) async {
+    final res = await http.get(Uri.parse('$_baseUrl/treatmentCycles/$cycleId'), headers: _headers);
+    return await _handleResponse(res);
+  }
+
+  // Patient lab results (admin-managed data)
+  Future<List<dynamic>> getPatientLabResults() async {
+    final res = await http.get(Uri.parse('$_baseUrl/labResults/patient'), headers: _headers);
+    return await _handleResponse(res) as List;
+  }
+
+  Future<Map<String, dynamic>> getLabResultDetails(String resultId) async {
+    final res = await http.get(Uri.parse('$_baseUrl/labResults/$resultId'), headers: _headers);
+    return await _handleResponse(res);
+  }
+
+  // Patient invoices (admin-managed data)
+  Future<List<dynamic>> getPatientInvoices() async {
+    final res = await http.get(Uri.parse('$_baseUrl/invoices/patient'), headers: _headers);
+    return await _handleResponse(res) as List;
+  }
 }
 
 class ApiException implements Exception {
