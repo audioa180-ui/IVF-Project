@@ -1,0 +1,52 @@
+[
+  {
+    "id": "faq-1",
+    "question": "What is IVF and how does it work?",
+    "answer": "IVF (In Vitro Fertilization) is a fertility treatment where eggs are retrieved from the ovaries and fertilized with sperm in a laboratory. The resulting embryos are monitored for 5-6 days, and the healthiest one is transferred to the uterus. The entire cycle takes about 4-6 weeks."
+  },
+  {
+    "id": "faq-2",
+    "question": "How long does an IVF cycle take?",
+    "answer": "A complete IVF cycle typically takes 4-6 weeks from start to finish. This includes initial consultation (1 week), ovarian stimulation (10-14 days), egg retrieval (1 day), embryo culture (5-6 days), embryo transfer (1 day), and the pregnancy test (2 weeks after transfer)."
+  },
+  {
+    "id": "faq-3",
+    "question": "Is IVF painful?",
+    "answer": "Most women find IVF to be manageable. The hormone injections may cause mild discomfort and bloating. Egg retrieval is performed under light sedation, so you won't feel pain during the procedure. Embryo transfer is similar to a pap smear and causes minimal discomfort."
+  },
+  {
+    "id": "faq-4",
+    "question": "What is the success rate of IVF?",
+    "answer": "IVF success rates vary based on age, overall health, and the cause of infertility. At Bloom, our overall success rate is 68%, with women under 35 having the highest success rates. We recommend discussing your specific chances during your consultation."
+  },
+  {
+    "id": "faq-5",
+    "question": "Are there any side effects of IVF medications?",
+    "answer": "Common side effects include bloating, mood swings, headaches, and hot flashes. These are temporary and caused by hormonal medications. Serious complications like Ovarian Hyperstimulation Syndrome (OHSS) are rare and our team monitors you closely throughout treatment."
+  },
+  {
+    "id": "faq-6",
+    "question": "Can I work during IVF treatment?",
+    "answer": "Yes, most women continue working during IVF treatment. You may need to take time off for monitoring appointments and procedures. The egg retrieval day and embryo transfer day typically require a day off. Discuss your work schedule with your doctor for personalized guidance."
+  },
+  {
+    "id": "faq-7",
+    "question": "What should I eat during IVF treatment?",
+    "answer": "A balanced diet rich in protein, healthy fats, and complex carbohydrates is recommended. Focus on leafy greens, lean proteins, whole grains, and antioxidant-rich fruits. Stay hydrated and limit caffeine to one cup per day. Avoid alcohol and processed foods."
+  },
+  {
+    "id": "faq-8",
+    "question": "How many embryos are typically transferred?",
+    "answer": "At Bloom, we typically transfer a single embryo to minimize the risk of multiple pregnancies. In certain cases, based on age and embryo quality, two embryos may be considered. The decision is made jointly with your doctor based on your specific situation."
+  },
+  {
+    "id": "faq-9",
+    "question": "What happens if the first IVF cycle fails?",
+    "answer": "A failed cycle can be emotional, but it doesn't mean you can't succeed. Your doctor will review what happened and may adjust your protocol. Many women succeed in subsequent cycles. We offer counseling and support groups to help you through this journey."
+  },
+  {
+    "id": "faq-10",
+    "question": "Does insurance cover IVF treatment?",
+    "answer": "Coverage varies by insurance provider and policy. Some plans cover diagnostic testing and medications, while others may cover part of the IVF procedure. Our financial counselors can help you understand your coverage and explore financing options."
+  }
+]

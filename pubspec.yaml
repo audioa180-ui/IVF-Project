@@ -1,0 +1,42 @@
+name: ivf_patient_app
+description: A comprehensive IVF patient consultation app
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  intl: ^0.18.1
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.1
+  url_launcher: ^6.2.3
+  table_calendar: ^3.0.9
+  animations: ^2.0.11
+  lottie: ^3.1.2
+  flutter_animate: ^4.5.0
+  page_transition: ^2.1.0
+  google_fonts: ^6.2.1
+  http: ^1.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+# path_provider_android 2.3.x pulls in jni_flutter, whose Android plugin
+# registration is incompatible with this project's current Gradle setup.
+dependency_overrides:
+  path_provider_android: 2.2.15
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "bloom-main",
+    "name": "Bloom Fertility & IVF Center - Main",
+    "address": "42, Green Avenue, Andheri West, Mumbai - 400053",
+    "phone": "+91 22 6789 0123",
+    "rating": 4.8,
+    "image": "https://img.icons8.com/color/96/hospital.png"
+  },
+  {
+    "id": "bloom-south",
+    "name": "Bloom Fertility & IVF Center - South Mumbai",
+    "address": "15, Marine Drive, Churchgate, Mumbai - 400020",
+    "phone": "+91 22 6789 0456",
+    "rating": 4.7,
+    "image": "https://img.icons8.com/color/96/hospital.png"
+  },
+  {
+    "id": "bloom-pune",
+    "name": "Bloom Fertility & IVF Center - Pune",
+    "address": "88, Koregaon Park, Pune - 411001",
+    "phone": "+91 20 6789 0789",
+    "rating": 4.6,
+    "image": "https://img.icons8.com/color/96/hospital.png"
+  }
+]

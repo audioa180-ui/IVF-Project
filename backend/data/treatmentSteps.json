@@ -1,0 +1,82 @@
+[
+  {
+    "id": "consultation",
+    "order": 1,
+    "title": "Initial Consultation",
+    "subtitle": "Meet your specialist",
+    "description": "Your first consultation with our fertility specialist. We'll discuss your medical history, concerns, and create a personalized treatment plan.",
+    "duration": "1-2 weeks",
+    "icon": "🤝",
+    "status": "completed"
+  },
+  {
+    "id": "fertility-tests",
+    "order": 2,
+    "title": "Fertility Tests",
+    "subtitle": "Understanding your health",
+    "description": "Comprehensive fertility assessment including blood work, ultrasound, and genetic screening to understand your unique needs.",
+    "duration": "2-3 weeks",
+    "icon": "🔬",
+    "status": "in_progress"
+  },
+  {
+    "id": "treatment-plan",
+    "order": 3,
+    "title": "Treatment Plan",
+    "subtitle": "Your personalized roadmap",
+    "description": "Based on test results, your doctor will design a customized treatment plan tailored to your specific needs and goals.",
+    "duration": "1 week",
+    "icon": "📋",
+    "status": "locked"
+  },
+  {
+    "id": "medication",
+    "order": 4,
+    "title": "Medication Cycle",
+    "subtitle": "Preparing your body",
+    "description": "Hormonal medications to stimulate egg production. Regular monitoring through blood tests and ultrasounds to track progress.",
+    "duration": "10-14 days",
+    "icon": "💊",
+    "status": "locked"
+  },
+  {
+    "id": "egg-retrieval",
+    "order": 5,
+    "title": "Egg Retrieval",
+    "subtitle": "A minor procedure",
+    "description": "A minor surgical procedure to collect mature eggs from your ovaries. Performed under light sedation by our experienced team.",
+    "duration": "30 minutes",
+    "icon": "🫧",
+    "status": "locked"
+  },
+  {
+    "id": "fertilization",
+    "order": 6,
+    "title": "Fertilization & Embryo Culture",
+    "subtitle": "Creating new life",
+    "description": "Your eggs are fertilized with sperm in our state-of-the-art lab. Embryos are carefully monitored as they develop over 5-6 days.",
+    "duration": "5-6 days",
+    "icon": "🧬",
+    "status": "locked"
+  },
+  {
+    "id": "embryo-transfer",
+    "order": 7,
+    "title": "Embryo Transfer",
+    "subtitle": "The final step",
+    "description": "A gentle procedure where the healthiest embryo is placed into your uterus. Simple, painless, and over in minutes.",
+    "duration": "15 minutes",
+    "icon": "✨",
+    "status": "locked"
+  },
+  {
+    "id": "pregnancy-test",
+    "order": 8,
+    "title": "Pregnancy Test",
+    "subtitle": "Waiting for results",
+    "description": "Two weeks after transfer, a blood test will confirm whether the treatment was successful. Our team is with you every step of the way.",
+    "duration": "2 weeks wait",
+    "icon": "🎯",
+    "status": "locked"
+  }
+]

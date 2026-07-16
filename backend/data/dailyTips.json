@@ -1,0 +1,58 @@
+[
+  {
+    "id": "tip-1",
+    "icon": "🥗",
+    "category": "Nutrition",
+    "title": "Eat Folate-Rich Foods",
+    "description": "Include leafy greens, citrus fruits, and fortified cereals in your diet. Folate supports healthy egg development and reduces the risk of neural tube defects."
+  },
+  {
+    "id": "tip-2",
+    "icon": "🧘",
+    "category": "Wellness",
+    "title": "Practice Deep Breathing",
+    "description": "Try 5 minutes of deep breathing exercises each morning. It lowers cortisol levels, reduces stress, and improves blood flow to reproductive organs."
+  },
+  {
+    "id": "tip-3",
+    "icon": "💧",
+    "category": "Hydration",
+    "title": "Stay Hydrated",
+    "description": "Drink at least 8 glasses of water daily. Proper hydration improves cervical mucus quality and supports overall reproductive health."
+  },
+  {
+    "id": "tip-4",
+    "icon": "🏃‍♀️",
+    "category": "Exercise",
+    "title": "Moderate Exercise",
+    "description": "30 minutes of moderate exercise like walking or swimming can improve fertility outcomes. Avoid intense workouts that may stress the body."
+  },
+  {
+    "id": "tip-5",
+    "icon": "😴",
+    "category": "Rest",
+    "title": "Prioritize Sleep",
+    "description": "Aim for 7-9 hours of quality sleep. Poor sleep disrupts hormone production, including those essential for ovulation and implantation."
+  },
+  {
+    "id": "tip-6",
+    "icon": "🚭",
+    "category": "Lifestyle",
+    "title": "Avoid Smoking & Alcohol",
+    "description": "Both smoking and alcohol significantly reduce fertility in women and men. Quitting improves egg quality, sperm health, and IVF success rates."
+  },
+  {
+    "id": "tip-7",
+    "icon": "📓",
+    "category": "Mental Health",
+    "title": "Journal Your Journey",
+    "description": "Writing down your thoughts and feelings can help process the emotional aspects of fertility treatment. It's a healthy outlet for stress and anxiety."
+  },
+  {
+    "id": "tip-8",
+    "icon": "🥑",
+    "category": "Nutrition",
+    "title": "Healthy Fats Matter",
+    "description": "Include avocados, nuts, seeds, and olive oil in your diet. Healthy fats support hormone production and reduce inflammation."
+  }
+]
