@@ -3,6 +3,7 @@ const Appointment = require('../models/Appointment');
 
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { requireAdmin } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bloom_ivf_jwt_secret_dev';
 
@@ -20,7 +21,7 @@ function auth(req, res, next) {
 // Patient routes
 router.get('/', auth, async (req, res) => {
   try {
-    const appointments = await Appointment.find({ userId: req.user.userId }).sort({ date: -1 });
+    const appointments = await Appointment.find({ userId: req.user.id }).sort({ date: -1 });
     res.json(appointments);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -31,7 +32,7 @@ router.post('/', auth, async (req, res) => {
   try {
     const { doctorId, doctorName, clinic, date, time } = req.body;
     const appointment = await Appointment.create({
-      userId: req.user.userId, doctorId, doctorName, clinic,
+      userId: req.user.id, doctorId, doctorName, clinic,
       date: new Date(date), time, status: 'upcoming'
     });
     res.status(201).json(appointment);
@@ -43,7 +44,7 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   try {
     const appointment = await Appointment.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.userId },
+      { _id: req.params.id, userId: req.user.id },
       { $set: req.body },
       { new: true }
     );
@@ -57,7 +58,7 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const appointment = await Appointment.findOneAndDelete(
-      { _id: req.params.id, userId: req.user.userId }
+      { _id: req.params.id, userId: req.user.id }
     );
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
     res.json({ message: 'Cancelled' });
@@ -67,7 +68,7 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // Admin routes - get all appointments with optional filters
-router.get('/admin/all', auth, async (req, res) => {
+router.get('/admin/all', requireAdmin, async (req, res) => {
   try {
     const { doctorId, userId, status, startDate, endDate } = req.query;
     const filter = {};
@@ -91,7 +92,7 @@ router.get('/admin/all', auth, async (req, res) => {
 });
 
 // Admin route - update appointment status
-router.put('/admin/:id/status', auth, async (req, res) => {
+router.put('/admin/:id/status', requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const appointment = await Appointment.findByIdAndUpdate(
@@ -107,7 +108,7 @@ router.put('/admin/:id/status', auth, async (req, res) => {
 });
 
 // Admin route - get appointment statistics
-router.get('/admin/stats', auth, async (req, res) => {
+router.get('/admin/stats', requireAdmin, async (req, res) => {
   try {
     const total = await Appointment.countDocuments();
     const upcoming = await Appointment.countDocuments({ status: 'upcoming' });

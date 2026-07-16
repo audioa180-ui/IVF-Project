@@ -1,7 +1,9 @@
 const express = require('express');
 const TreatmentCycle = require('../models/TreatmentCycle');
+const Patient = require('../models/Patient');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { requireAdmin } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bloom_ivf_jwt_secret_dev';
 
@@ -20,7 +22,9 @@ function auth(req, res, next) {
 // Get patient's own treatment cycles
 router.get('/patient', auth, async (req, res) => {
   try {
-    const cycles = await TreatmentCycle.find({ patientId: req.user.userId })
+    const patient = await Patient.findOne({ userId: req.user.id });
+    if (!patient) return res.json([]);
+    const cycles = await TreatmentCycle.find({ patientId: patient._id })
       .sort({ startDate: -1 });
     res.json(cycles);
   } catch (err) {
@@ -34,7 +38,8 @@ router.get('/:id', auth, async (req, res) => {
     const cycle = await TreatmentCycle.findById(req.params.id);
     if (!cycle) return res.status(404).json({ error: 'Treatment cycle not found' });
     // Only allow patient to view their own cycles
-    if (cycle.patientId.toString() !== req.user.userId) {
+    const patient = await Patient.findOne({ userId: req.user.id });
+    if (!patient || cycle.patientId.toString() !== patient._id.toString()) {
       return res.status(403).json({ error: 'Access denied' });
     }
     res.json(cycle);
@@ -44,7 +49,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Admin routes
-router.get('/admin/all', auth, async (req, res) => {
+router.get('/admin/all', requireAdmin, async (req, res) => {
   try {
     const { status, cycleType, doctorId, patientId } = req.query;
     const filter = {};
@@ -65,7 +70,7 @@ router.get('/admin/all', auth, async (req, res) => {
 });
 
 // Get treatment cycle details (Admin)
-router.get('/admin/:id', auth, async (req, res) => {
+router.get('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const cycle = await TreatmentCycle.findById(req.params.id)
       .populate('patientId', 'name email phone')
@@ -78,7 +83,7 @@ router.get('/admin/:id', auth, async (req, res) => {
 });
 
 // Create treatment cycle (Admin)
-router.post('/admin', auth, async (req, res) => {
+router.post('/admin', requireAdmin, async (req, res) => {
   try {
     const cycle = await TreatmentCycle.create(req.body);
     res.status(201).json(cycle);
@@ -88,7 +93,7 @@ router.post('/admin', auth, async (req, res) => {
 });
 
 // Update treatment cycle (Admin)
-router.put('/admin/:id', auth, async (req, res) => {
+router.put('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const cycle = await TreatmentCycle.findByIdAndUpdate(
       req.params.id,
@@ -103,7 +108,7 @@ router.put('/admin/:id', auth, async (req, res) => {
 });
 
 // Update cycle status (Admin)
-router.put('/admin/:id/status', auth, async (req, res) => {
+router.put('/admin/:id/status', requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
     const cycle = await TreatmentCycle.findByIdAndUpdate(
@@ -119,7 +124,7 @@ router.put('/admin/:id/status', auth, async (req, res) => {
 });
 
 // Add monitoring scan (Admin)
-router.post('/admin/:id/monitoring', auth, async (req, res) => {
+router.post('/admin/:id/monitoring', requireAdmin, async (req, res) => {
   try {
     const cycle = await TreatmentCycle.findById(req.params.id);
     if (!cycle) return res.status(404).json({ error: 'Treatment cycle not found' });
@@ -133,7 +138,7 @@ router.post('/admin/:id/monitoring', auth, async (req, res) => {
 });
 
 // Get treatment cycle statistics (Admin)
-router.get('/admin/stats', auth, async (req, res) => {
+router.get('/admin/stats', requireAdmin, async (req, res) => {
   try {
     const total = await TreatmentCycle.countDocuments();
     const active = await TreatmentCycle.countDocuments({ status: 'active' });

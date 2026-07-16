@@ -16,6 +16,9 @@ const verifyAdmin = (req, res, next) => {
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded.role || !['admin', 'master'].includes(decoded.role)) {
+      return res.status(403).json({ error: 'Administrator access is required' });
+    }
     req.admin = decoded;
     next();
   } catch (err) {

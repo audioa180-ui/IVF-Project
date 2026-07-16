@@ -1,7 +1,9 @@
 const express = require('express');
 const Invoice = require('../models/Invoice');
+const Patient = require('../models/Patient');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { requireAdmin } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bloom_ivf_jwt_secret_dev';
 
@@ -20,7 +22,9 @@ function auth(req, res, next) {
 // Get patient's own invoices
 router.get('/patient', auth, async (req, res) => {
   try {
-    const invoices = await Invoice.find({ patientId: req.user.userId })
+    const patient = await Patient.findOne({ userId: req.user.id });
+    if (!patient) return res.json([]);
+    const invoices = await Invoice.find({ patientId: patient._id })
       .sort({ invoiceDate: -1 });
     res.json(invoices);
   } catch (err) {
@@ -34,7 +38,8 @@ router.get('/:id', auth, async (req, res) => {
     const invoice = await Invoice.findById(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     // Only allow patient to view their own invoices
-    if (invoice.patientId.toString() !== req.user.userId) {
+    const patient = await Patient.findOne({ userId: req.user.id });
+    if (!patient || invoice.patientId.toString() !== patient._id.toString()) {
       return res.status(403).json({ error: 'Access denied' });
     }
     res.json(invoice);
@@ -44,7 +49,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Admin routes
-router.get('/admin/all', auth, async (req, res) => {
+router.get('/admin/all', requireAdmin, async (req, res) => {
   try {
     const { patientId, paymentStatus, startDate, endDate } = req.query;
     const filter = {};
@@ -68,7 +73,7 @@ router.get('/admin/all', auth, async (req, res) => {
 });
 
 // Get invoice details (Admin)
-router.get('/admin/:id', auth, async (req, res) => {
+router.get('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id)
       .populate('patientId', 'name email phone');
@@ -80,7 +85,7 @@ router.get('/admin/:id', auth, async (req, res) => {
 });
 
 // Create invoice (Admin)
-router.post('/admin', auth, async (req, res) => {
+router.post('/admin', requireAdmin, async (req, res) => {
   try {
     const invoice = await Invoice.create(req.body);
     res.status(201).json(invoice);
@@ -90,7 +95,7 @@ router.post('/admin', auth, async (req, res) => {
 });
 
 // Update invoice (Admin)
-router.put('/admin/:id', auth, async (req, res) => {
+router.put('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const invoice = await Invoice.findByIdAndUpdate(
       req.params.id,
@@ -105,7 +110,7 @@ router.put('/admin/:id', auth, async (req, res) => {
 });
 
 // Update payment status (Admin)
-router.put('/admin/:id/payment', auth, async (req, res) => {
+router.put('/admin/:id/payment', requireAdmin, async (req, res) => {
   try {
     const { paymentStatus, paidAmount, paymentMethod } = req.body;
     const invoice = await Invoice.findByIdAndUpdate(
@@ -125,7 +130,7 @@ router.put('/admin/:id/payment', auth, async (req, res) => {
 });
 
 // Delete invoice (Admin)
-router.delete('/admin/:id', auth, async (req, res) => {
+router.delete('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const invoice = await Invoice.findByIdAndDelete(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
@@ -136,7 +141,7 @@ router.delete('/admin/:id', auth, async (req, res) => {
 });
 
 // Get invoice statistics (Admin)
-router.get('/admin/stats', auth, async (req, res) => {
+router.get('/admin/stats', requireAdmin, async (req, res) => {
   try {
     const total = await Invoice.countDocuments();
     const pending = await Invoice.countDocuments({ paymentStatus: 'pending' });

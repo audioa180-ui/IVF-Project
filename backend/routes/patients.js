@@ -2,6 +2,7 @@ const express = require('express');
 const Patient = require('../models/Patient');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { requireAdmin } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bloom_ivf_jwt_secret_dev';
 
@@ -17,7 +18,7 @@ function auth(req, res, next) {
 }
 
 // Get all patients (Admin)
-router.get('/admin/all', auth, async (req, res) => {
+router.get('/admin/all', requireAdmin, async (req, res) => {
   try {
     const { status, search } = req.query;
     const filter = {};
@@ -41,7 +42,7 @@ router.get('/admin/all', auth, async (req, res) => {
 });
 
 // Get patient details (Admin)
-router.get('/admin/:id', auth, async (req, res) => {
+router.get('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const patient = await Patient.findById(req.params.id)
       .populate('preferredDoctor', 'name qualification')
@@ -54,7 +55,7 @@ router.get('/admin/:id', auth, async (req, res) => {
 });
 
 // Create patient (Admin)
-router.post('/admin', auth, async (req, res) => {
+router.post('/admin', requireAdmin, async (req, res) => {
   try {
     const patient = await Patient.create(req.body);
     res.status(201).json(patient);
@@ -64,7 +65,7 @@ router.post('/admin', auth, async (req, res) => {
 });
 
 // Update patient (Admin)
-router.put('/admin/:id', auth, async (req, res) => {
+router.put('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const patient = await Patient.findByIdAndUpdate(
       req.params.id,
@@ -79,7 +80,7 @@ router.put('/admin/:id', auth, async (req, res) => {
 });
 
 // Delete patient (Admin)
-router.delete('/admin/:id', auth, async (req, res) => {
+router.delete('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const patient = await Patient.findByIdAndDelete(req.params.id);
     if (!patient) return res.status(404).json({ error: 'Patient not found' });
@@ -90,7 +91,7 @@ router.delete('/admin/:id', auth, async (req, res) => {
 });
 
 // Get patient statistics (Admin)
-router.get('/admin/stats', auth, async (req, res) => {
+router.get('/admin/stats', requireAdmin, async (req, res) => {
   try {
     const total = await Patient.countDocuments();
     const active = await Patient.countDocuments({ status: 'active' });

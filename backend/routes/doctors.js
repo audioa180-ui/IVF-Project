@@ -1,21 +1,8 @@
 const express = require('express');
 const Doctor = require('../models/Doctor');
-const jwt = require('jsonwebtoken');
+const { authenticate, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'bloom_ivf_jwt_secret_dev';
-
-function auth(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header) return res.status(401).json({ error: 'No token provided' });
-  try {
-    req.user = jwt.verify(header.replace('Bearer ', ''), JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-}
 
 // Public routes
 router.get('/', async (req, res) => {
@@ -44,7 +31,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Admin routes
-router.get('/admin/all', auth, async (req, res) => {
+router.get('/admin/all', requireAdmin, async (req, res) => {
   try {
     const { specialization, availableToday } = req.query;
     const filter = {};
@@ -59,7 +46,7 @@ router.get('/admin/all', auth, async (req, res) => {
   }
 });
 
-router.get('/admin/:id', auth, async (req, res) => {
+router.get('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const doctor = await Doctor.findById(req.params.id);
     if (!doctor) return res.status(404).json({ error: 'Doctor not found' });
@@ -69,7 +56,7 @@ router.get('/admin/:id', auth, async (req, res) => {
   }
 });
 
-router.post('/admin', auth, async (req, res) => {
+router.post('/admin', requireAdmin, async (req, res) => {
   try {
     const doctor = await Doctor.create(req.body);
     res.status(201).json(doctor);
@@ -78,7 +65,7 @@ router.post('/admin', auth, async (req, res) => {
   }
 });
 
-router.put('/admin/:id', auth, async (req, res) => {
+router.put('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const doctor = await Doctor.findByIdAndUpdate(
       req.params.id,
@@ -92,7 +79,7 @@ router.put('/admin/:id', auth, async (req, res) => {
   }
 });
 
-router.delete('/admin/:id', auth, async (req, res) => {
+router.delete('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const doctor = await Doctor.findByIdAndDelete(req.params.id);
     if (!doctor) return res.status(404).json({ error: 'Doctor not found' });
@@ -102,7 +89,7 @@ router.delete('/admin/:id', auth, async (req, res) => {
   }
 });
 
-router.get('/admin/stats', auth, async (req, res) => {
+router.get('/admin/stats', requireAdmin, async (req, res) => {
   try {
     const total = await Doctor.countDocuments();
     const available = await Doctor.countDocuments({ availableToday: true });

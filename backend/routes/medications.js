@@ -2,6 +2,7 @@ const express = require('express');
 const Medication = require('../models/Medication');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const { requireAdmin } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'bloom_ivf_jwt_secret_dev';
 
@@ -17,7 +18,7 @@ function auth(req, res, next) {
 }
 
 // Get all medications (Admin)
-router.get('/admin/all', auth, async (req, res) => {
+router.get('/admin/all', requireAdmin, async (req, res) => {
   try {
     const { category, isActive, lowStock } = req.query;
     const filter = {};
@@ -36,7 +37,7 @@ router.get('/admin/all', auth, async (req, res) => {
 });
 
 // Get medication details (Admin)
-router.get('/admin/:id', auth, async (req, res) => {
+router.get('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const medication = await Medication.findById(req.params.id);
     if (!medication) return res.status(404).json({ error: 'Medication not found' });
@@ -47,7 +48,7 @@ router.get('/admin/:id', auth, async (req, res) => {
 });
 
 // Create medication (Admin)
-router.post('/admin', auth, async (req, res) => {
+router.post('/admin', requireAdmin, async (req, res) => {
   try {
     const medication = await Medication.create(req.body);
     res.status(201).json(medication);
@@ -57,7 +58,7 @@ router.post('/admin', auth, async (req, res) => {
 });
 
 // Update medication (Admin)
-router.put('/admin/:id', auth, async (req, res) => {
+router.put('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const medication = await Medication.findByIdAndUpdate(
       req.params.id,
@@ -72,7 +73,7 @@ router.put('/admin/:id', auth, async (req, res) => {
 });
 
 // Delete medication (Admin)
-router.delete('/admin/:id', auth, async (req, res) => {
+router.delete('/admin/:id', requireAdmin, async (req, res) => {
   try {
     const medication = await Medication.findByIdAndDelete(req.params.id);
     if (!medication) return res.status(404).json({ error: 'Medication not found' });
@@ -83,7 +84,7 @@ router.delete('/admin/:id', auth, async (req, res) => {
 });
 
 // Update stock (Admin)
-router.put('/admin/:id/stock', auth, async (req, res) => {
+router.put('/admin/:id/stock', requireAdmin, async (req, res) => {
   try {
     const { stock } = req.body;
     const medication = await Medication.findByIdAndUpdate(
@@ -99,7 +100,7 @@ router.put('/admin/:id/stock', auth, async (req, res) => {
 });
 
 // Get medication statistics (Admin)
-router.get('/admin/stats', auth, async (req, res) => {
+router.get('/admin/stats', requireAdmin, async (req, res) => {
   try {
     const total = await Medication.countDocuments();
     const active = await Medication.countDocuments({ isActive: true });
