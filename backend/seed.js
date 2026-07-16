@@ -44,10 +44,12 @@ async function seed() {
   const Doctor = require('./models/Doctor');
   const Blog = require('./models/Blog');
   const User = require('./models/User');
+  const Admin = require('./models/Admin');
 
   await Doctor.deleteMany({});
   await Blog.deleteMany({});
   await User.deleteMany({});
+  await Admin.deleteMany({});
 
   const doctors = await Doctor.insertMany(doctorData);
   console.log(`Seeded ${doctors.length} doctors`);
@@ -78,6 +80,15 @@ async function seed() {
     savedBlogs: [blogs[0]._id.toString(), blogs[2]._id.toString()],
   });
   console.log(`Seeded demo user: ${demoUser.email} / test1234`);
+
+  const masterAdmin = await Admin.create({
+    name: 'Master Administrator',
+    email: 'master@bloomivf.com',
+    password: 'Master@2024',
+    role: 'master',
+    isActive: true
+  });
+  console.log(`Seeded master admin: ${masterAdmin.email} / Master@2024`);
 
   console.log('\nSeed complete!');
   process.exit(0);
