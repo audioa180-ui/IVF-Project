@@ -6,7 +6,10 @@ import 'package:ivf_patient_app/models/appointment.dart';
 import 'package:ivf_patient_app/models/blog.dart';
 
 class ApiService {
-  static String _baseUrl = 'http://localhost:4000/api';
+  static String _baseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:4000/api',
+  );
 
   static void setBaseUrl(String url) => _baseUrl = url;
 
