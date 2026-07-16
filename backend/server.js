@@ -5,7 +5,11 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://audioa180_db_user:9ToNBulgSMJwrs9U@cluster0.vc3reag.mongodb.net/bloom_ivf?retryWrites=true&w=majority';

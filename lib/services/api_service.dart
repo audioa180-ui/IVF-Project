@@ -7,10 +7,7 @@ import 'package:ivf_patient_app/models/blog.dart';
 import 'package:ivf_patient_app/config/app_config.dart';
 
 class ApiService {
-  static String _baseUrl = const String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: AppConfig.apiUrl,
-  );
+  static String _baseUrl = AppConfig.apiUrl;
 
   static void setBaseUrl(String url) => _baseUrl = url;
 
