@@ -114,7 +114,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Overview',
       [
         if (_dashboardStats != null) ...[
-          _buildStatCard('Total Users', _dashboardStats!['totalUsers']?.toString() ?? '0', AdminTheme.lavenderPrimary),
+          _buildStatCard('Total Users', _dashboardStats!['totalUsers']?.toString() ?? '0', AdminTheme.navyPrimary),
           _buildStatCard('Total Doctors', _dashboardStats!['totalDoctors']?.toString() ?? '0', AdminTheme.info),
           _buildStatCard('Total Appointments', _dashboardStats!['totalAppointments']?.toString() ?? '0', AdminTheme.success),
           _buildStatCard('Total Admins', _dashboardStats!['totalAdmins']?.toString() ?? '0', AdminTheme.warning),
@@ -128,7 +128,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Appointments',
       [
         if (_appointmentStats != null) ...[
-          _buildStatCard('Total', _appointmentStats!['total']?.toString() ?? '0', AdminTheme.lavenderPrimary),
+          _buildStatCard('Total', _appointmentStats!['total']?.toString() ?? '0', AdminTheme.navyPrimary),
           _buildStatCard('Upcoming', _appointmentStats!['upcoming']?.toString() ?? '0', AdminTheme.info),
           _buildStatCard('Completed', _appointmentStats!['completed']?.toString() ?? '0', AdminTheme.success),
           _buildStatCard('Cancelled', _appointmentStats!['cancelled']?.toString() ?? '0', AdminTheme.error),
@@ -142,7 +142,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Patients',
       [
         if (_patientStats != null) ...[
-          _buildStatCard('Total', _patientStats!['total']?.toString() ?? '0', AdminTheme.lavenderPrimary),
+          _buildStatCard('Total', _patientStats!['total']?.toString() ?? '0', AdminTheme.navyPrimary),
           _buildStatCard('Active', _patientStats!['active']?.toString() ?? '0', AdminTheme.success),
           _buildStatCard('Active Cycles', _patientStats!['activeCycles']?.toString() ?? '0', AdminTheme.info),
           _buildStatCard('Profile Complete', _patientStats!['profileComplete']?.toString() ?? '0', AdminTheme.warning),
@@ -156,7 +156,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Treatment Cycles',
       [
         if (_cycleStats != null) ...[
-          _buildStatCard('Total', _cycleStats!['total']?.toString() ?? '0', AdminTheme.lavenderPrimary),
+          _buildStatCard('Total', _cycleStats!['total']?.toString() ?? '0', AdminTheme.navyPrimary),
           _buildStatCard('Active', _cycleStats!['active']?.toString() ?? '0', AdminTheme.info),
           _buildStatCard('Pregnant', _cycleStats!['pregnant']?.toString() ?? '0', AdminTheme.success),
           _buildStatCard('Success Rate', '${_cycleStats!['successRate']?.toString() ?? '0'}%', AdminTheme.warning),
@@ -170,7 +170,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Lab Results',
       [
         if (_labStats != null) ...[
-          _buildStatCard('Total', _labStats!['total']?.toString() ?? '0', AdminTheme.lavenderPrimary),
+          _buildStatCard('Total', _labStats!['total']?.toString() ?? '0', AdminTheme.navyPrimary),
           _buildStatCard('Abnormal', _labStats!['abnormal']?.toString() ?? '0', AdminTheme.error),
           _buildStatCard('Follow-up', _labStats!['requiresFollowUp']?.toString() ?? '0', AdminTheme.warning),
           _buildStatCard('Reviewed', _labStats!['reviewed']?.toString() ?? '0', AdminTheme.success),
@@ -184,7 +184,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Medications',
       [
         if (_medicationStats != null) ...[
-          _buildStatCard('Total', _medicationStats!['total']?.toString() ?? '0', AdminTheme.lavenderPrimary),
+          _buildStatCard('Total', _medicationStats!['total']?.toString() ?? '0', AdminTheme.navyPrimary),
           _buildStatCard('Active', _medicationStats!['active']?.toString() ?? '0', AdminTheme.success),
           _buildStatCard('Low Stock', _medicationStats!['lowStock']?.toString() ?? '0', AdminTheme.error),
           _buildStatCard('Expiring Soon', _medicationStats!['expiringSoon']?.toString() ?? '0', AdminTheme.warning),
@@ -198,7 +198,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       'Invoices',
       [
         if (_invoiceStats != null) ...[
-          _buildStatCard('Total', _invoiceStats!['total']?.toString() ?? '0', AdminTheme.lavenderPrimary),
+          _buildStatCard('Total', _invoiceStats!['total']?.toString() ?? '0', AdminTheme.navyPrimary),
           _buildStatCard('Pending', _invoiceStats!['pending']?.toString() ?? '0', AdminTheme.warning),
           _buildStatCard('Paid', _invoiceStats!['paid']?.toString() ?? '0', AdminTheme.success),
           _buildStatCard('Overdue', _invoiceStats!['overdue']?.toString() ?? '0', AdminTheme.error),
@@ -226,7 +226,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: AdminTheme.lavenderPrimary,
+            color: AdminTheme.navyPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
